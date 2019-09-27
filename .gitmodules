@@ -1,3 +1,7 @@
 [submodule "thirdparty/stb"]
 	path = thirdparty/stb
 	url = https://github.com/nothings/stb.git
+[submodule "thirdparty/ktx2"]
+	path = thirdparty/ktx2
+	url = https://github.com/KhronosGroup/KTX-Software.git
+	branch = ktx2
