@@ -36,7 +36,7 @@ Third Party Requirements:
 
 Currently, libktx does not come with a CMake list and additional steps need to be taken (MSVC example):
 
-* Build libktx using the project files for your toolchain found in the ```thirdparty\ktx2\build\``` folder. E.g. thirdparty\ktx2\build\msvs\x64\vs2017
+* [Build libktx](https://github.com/KhronosGroup/KTX-Software/blob/ktx2/BUILDING.md) using the project files for your toolchain found in the ```thirdparty\ktx2\build\``` folder. E.g. thirdparty\ktx2\build\msvs\x64\vs2017
 * Set ```KTX2_LIBRARY``` CMake variable to your .lib / .a file. E.g. E:\Projects\glTFIBLSampler\thirdparty\ktx2\build\msvs\x64\vs2017\Debug\libktx.gl.lib
 * (Windows) Copy ```libktx.gl.dll/dynlib``` and ```glew32.dll``` from the same folder to your executable folder (output containing cli.exe).
 * Copy the ```lib/shaders``` folder to your executable folder
