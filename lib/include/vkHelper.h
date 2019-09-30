@@ -176,6 +176,8 @@ namespace IBLLib
 		std::vector<Buffer> m_buffers;
 		std::vector<Image> m_images;
 		std::vector<VkSampler> m_samplers;
+
+		bool m_debugOutputEnabled;
 	};
 
 	class SpecConstantFactory

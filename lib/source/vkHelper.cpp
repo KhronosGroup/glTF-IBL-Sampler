@@ -15,7 +15,7 @@ IBLLib::vkHelper::~vkHelper()
 VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descriptorPoolSizeFactor, bool _debugOutput)
 {
 	VkResult res = VK_RESULT_MAX_ENUM;
-
+	m_debugOutputEnabled = _debugOutput;
 	//
 	// Create instance
 	//
@@ -150,7 +150,10 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 			return VK_RESULT_MAX_ENUM;
 		}
 
-		printf("Selected queue index %u\n", m_queueFamilyIndex);
+		if (m_debugOutputEnabled)
+		{
+			printf("Selected queue index %u\n", m_queueFamilyIndex);
+		}
 
 		float queuePriority = 1.0f;
 		VkDeviceQueueCreateInfo queueCreateInfo{};
@@ -174,8 +177,10 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 			return res;
 		}
 
-		printf("Logical device created\n");
-
+		if (m_debugOutputEnabled)
+		{
+			printf("Logical device created\n");
+		}
 		vkGetDeviceQueue(m_logicalDevice, m_queueFamilyIndex, 0, &m_queue);
 	}
 
@@ -195,8 +200,10 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 			printf("Failed to create command pool [%u]\n", res);
 			return res;
 		}
-
-		printf("Command pool created\n");
+		if (m_debugOutputEnabled)
+		{
+			printf("Command pool created\n");
+		}
 	}
 
 	//
@@ -234,7 +241,10 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 			return res;
 		}
 
-		printf("Descriptor pool created\n");
+		if (m_debugOutputEnabled)
+		{
+			printf("Descriptor pool created\n");
+		}
 	}
 
 	//
@@ -319,7 +329,10 @@ void IBLLib::vkHelper::shutdown()
 		if (m_descriptorPool != VK_NULL_HANDLE)
 		{
 			vkDestroyDescriptorPool(m_logicalDevice, m_descriptorPool, nullptr);
-			printf("Vulkan descriptor pool destroyed\n");
+			if (m_debugOutputEnabled)
+			{
+				printf("Vulkan descriptor pool destroyed\n");
+			}
 			m_descriptorPool = VK_NULL_HANDLE;
 		}
 
@@ -342,7 +355,10 @@ void IBLLib::vkHelper::shutdown()
 			}
 
 			vkDestroyPipelineCache(m_logicalDevice, m_pipelineCache, nullptr);
-			printf("Vulkan pipeline cache destroyed\n");
+			if (m_debugOutputEnabled)
+			{
+				printf("Vulkan pipeline cache destroyed\n");
+			}
 			m_pipelineCache = VK_NULL_HANDLE;
 		}
 
@@ -361,19 +377,28 @@ void IBLLib::vkHelper::shutdown()
 		if (m_commandPool != VK_NULL_HANDLE)
 		{
 			vkDestroyCommandPool(m_logicalDevice, m_commandPool, nullptr);
-			printf("Vulkan command pool destroyed\n");
+			if (m_debugOutputEnabled)
+			{
+				printf("Vulkan command pool destroyed\n");
+			}
 			m_commandPool = VK_NULL_HANDLE;
 		}
 
 		vkDestroyDevice(m_logicalDevice, nullptr);
-		printf("Vulkan logical device destroyed\n");
+		if (m_debugOutputEnabled)
+		{
+			printf("Vulkan logical device destroyed\n");
+		}
 		m_logicalDevice = VK_NULL_HANDLE;
 	}
 
 	if (m_instance != VK_NULL_HANDLE)
 	{
 		vkDestroyInstance(m_instance, nullptr);
-		printf("Vulkan instance destroyed\n");
+		if (m_debugOutputEnabled)
+		{
+			printf("Vulkan instance destroyed\n");
+		}
 		m_instance = VK_NULL_HANDLE;
 	}
 }
@@ -543,8 +568,10 @@ VkResult IBLLib::vkHelper::executeCommandBuffers(const std::vector<VkCommandBuff
 			vkDestroyFence(m_logicalDevice, fence, nullptr);
 			return res;
 		}
-
-		printf("Executing %u command buffers\n", submitInfo.commandBufferCount);
+		if (m_debugOutputEnabled)
+		{
+			printf("Executing %u command buffers\n", submitInfo.commandBufferCount);
+		}
 	}
 
 	// wait / block for execution to be complete
@@ -1233,7 +1260,7 @@ VkResult IBLLib::vkHelper::createFramebuffer(VkFramebuffer& _outFramebuffer, VkR
 	if ((res = vkCreateFramebuffer(m_logicalDevice, &info, nullptr, &_outFramebuffer)) != VK_SUCCESS)
 	{
 		_outFramebuffer = VK_NULL_HANDLE;
-		printf("Failed to framebuffer [%u]\n", res);
+		printf("Failed to create framebuffer [%u]\n", res);
 		return res;
 	}
 

@@ -5,18 +5,6 @@ IBLLib::KtxImage::KtxImage(Version _version, uint32_t _width, uint32_t _height, 
 	m_version(_version)
 {
 
-	switch (_version)
-	{
-	case Version::KTX1:
-		m_createInfo.glInternalformat = IBLLib::vulkanToGlFormat(_vkFormat);
-		break;
-	case Version::KTX2:
-		m_createInfo.vkFormat = _vkFormat;
-		break;
-
-		
-	}
-
 	m_createInfo.baseWidth = _width;
 	m_createInfo.baseHeight = _height;
 	m_createInfo.baseDepth = 1u;
@@ -27,6 +15,9 @@ IBLLib::KtxImage::KtxImage(Version _version, uint32_t _width, uint32_t _height, 
 	m_createInfo.numFaces = _isCubeMap ? 6u : 1u;
 	m_createInfo.isArray = KTX_FALSE;
 	m_createInfo.generateMipmaps = KTX_FALSE;
+
+	m_createInfo.vkFormat = _vkFormat;
+	m_createInfo.glInternalformat = IBLLib::vulkanToGlFormat(_vkFormat);
 
 	ktxTexture1* pTexture1 = nullptr;
 	ktxTexture2* pTexture2 = nullptr;
@@ -43,7 +34,7 @@ IBLLib::KtxImage::KtxImage(Version _version, uint32_t _width, uint32_t _height, 
 		result = ktxTexture2_Create(&m_createInfo, KTX_TEXTURE_CREATE_ALLOC_STORAGE, &pTexture2);
 		if (result == KTX_SUCCESS)
 		{ 
-			const char name[] = "ktxfile";
+			const char name[] = "glTFIBLSampler";
 			ktxHashList_AddKVPair(&pTexture2->kvDataHead, KTX_WRITER_KEY, sizeof(name), name);
 			m_pTexture = ktxTexture(pTexture2);
 		}
@@ -100,11 +91,12 @@ IBLLib::Result IBLLib::KtxImage::compress(ktxBasisParams _params)
 	if (result != KTX_SUCCESS)
 	{
 		ktxTexture_Destroy(ktxTexture(m_pTexture));
+		printf("Compression failed \n");
 		printf("ktx: %s\n", ktxErrorString(result));
 		m_pTexture = nullptr;
 		return KtxError;
 	}
-
+	
 	return Success;
 }
 
@@ -152,6 +144,8 @@ IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 		return KtxError;
 	}
 	
+	printf("Ktx file successfully written to: %s\n", _pathOut);
+
 	return Success;
 }
 

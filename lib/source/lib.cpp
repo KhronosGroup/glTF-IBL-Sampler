@@ -441,7 +441,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 
 	vkHelper vulkan;
 
-	if (vulkan.initialize() != VK_SUCCESS)
+	if (vulkan.initialize(0u, 1u, true) != VK_SUCCESS)
 	{
 		return Result::VulkanInitializationFailed;
 	}
@@ -849,15 +849,17 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	//Generate MipLevels
+	printf("Generating mipmap levels\n");
 	generateMipmapLevels(vulkan, cubeMapCmd, inputCubeMap, maxMipLevels, cubeMapSideLength);
 
 	// Filter specular
+	printf("Filtering specular term\n");
 	vulkan.bindDescriptorSet(cubeMapCmd, specularFilterPipelineLayout, specularDescriptorSet);
 
 	vkCmdBindPipeline(cubeMapCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, specularFilterPipeline);
 
 	unsigned int currentFramebufferSideLength = cubeMapSideLength;
-	//Filter every mip level: from currentMipLevel->currentMipLevel+1
+	//Filter every mip level: from inputCubeMap->currentMipLevel
 	for (uint32_t currentMipLevel = 0; currentMipLevel < outputMipLevels; currentMipLevel++)
 	{
 		//Framebuffer will be destroyed automatically at shutdown
@@ -879,7 +881,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		values.roughness = currentMipLevel / static_cast<float>(outputMipLevels);
 		values.sampleCount = _sampleCount;
 		values.mipLevel = currentMipLevel;
-		values.width = currentFramebufferSideLength;
+		values.width = cubeMapSideLength;
 
 		vkCmdPushConstants(cubeMapCmd, specularFilterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
 
@@ -892,6 +894,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 	}
 
 	// Filter diffuse
+	printf("Filtering diffuse term\n");
 	{
 		VkFramebuffer diffuseCubeMapFramebuffer = VK_NULL_HANDLE;
 		if (vulkan.createFramebuffer(diffuseCubeMapFramebuffer, renderPass, cubeMapSideLength, cubeMapSideLength, outputDiffuseCubeMapViews, 1u) != VK_SUCCESS)
