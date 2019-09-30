@@ -12,6 +12,7 @@ layout(push_constant) uniform FilterParameters {
   uint sampleCount;
   uint currentMipLevel;
   uint width;
+  float lodBias;
 } pFilterParameters;
 
 layout (location = 0) in vec2 inUV;
@@ -169,6 +170,7 @@ vec3 filterSpecular(float roughness, vec3 N)
 				float solidAngleSample = 1.0 / (NumSamples * pdf);
 				
 				lod = 0.5 * log2(solidAngleSample / solidAngleTexel);
+				lod += pFilterParameters.lodBias;
 			}
 			
 			specular += textureLod(uCubeMap, L, lod).rgb * NdotL;
@@ -214,7 +216,7 @@ vec3 filterDiffuse(vec3 N)
 			float solidAngleSample = 1.0 / (float(NumSamples) * pdf);
 				
 			float lod = 0.5 * log2(solidAngleSample / solidAngleTexel);
-			
+			lod += pFilterParameters.lodBias;
 			diffuse += texture(uCubeMap, H, lod).rgb;
 			++weight;
 		}		

@@ -422,7 +422,7 @@ namespace IBLLib
 	}
 } // !IBLLib
 
-IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpecular, const char* _outputPathDiffuse, unsigned int _ktxVersion, unsigned int _ktxCompressionQuality, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat)
+IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpecular, const char* _outputPathDiffuse, unsigned int _ktxVersion, unsigned int _ktxCompressionQuality, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat, float _lodBias)
 {
 	const VkFormat cubeMapFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 	const uint32_t cubeMapSideLength = _cubemapResolution;
@@ -672,6 +672,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		uint32_t sampleCount = 1u;
 		uint32_t mipLevel = 1u;
 		uint32_t width = 1024u;
+		float lodBias = 0.f;
 	};
 
 	std::vector<VkPushConstantRange> ranges(1u);
@@ -882,6 +883,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		values.sampleCount = _sampleCount;
 		values.mipLevel = currentMipLevel;
 		values.width = cubeMapSideLength;
+		values.lodBias = _lodBias;
 
 		vkCmdPushConstants(cubeMapCmd, specularFilterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
 
@@ -920,6 +922,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		values.sampleCount = _sampleCount;
 		values.mipLevel = 0;
 		values.width = cubeMapSideLength;
+		values.lodBias = _lodBias;
 
 		vkCmdPushConstants(cubeMapCmd, diffuseFilterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
 

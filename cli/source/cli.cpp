@@ -16,6 +16,7 @@ int main(int argc, char* argv[])
 	unsigned int ktxVersion = 1u;
 	unsigned int compressionQuality = 0u;
 	OutputFormat targetFormat = R16G16B16A16_SFLOAT;
+	float lodBias = 1.0f;
 
 	for (int i = 1; i+1 < argc; i += 2)
 	{
@@ -68,6 +69,10 @@ int main(int argc, char* argv[])
 				targetFormat = R32G32B32A32_SFLOAT;
 			}
 		}
+		else if (strcmp(argv[i], "-lodBias") == 0)
+		{
+			lodBias = atof(argv[i + 1]);
+		}
 		else if (strcmp(argv[i], "-h") == 0)
 		{
 			printf("glTFIBLSampler\n");
@@ -119,7 +124,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	Result res = sample(pathIn, pathOutSpecular, pathOutDiffuse, ktxVersion, compressionQuality, cubeMapResolution, mipLevelCount, sampleCount, targetFormat); //pathin, pathout, resolution, mipmaps, sampleCount
+	Result res = sample(pathIn, pathOutSpecular, pathOutDiffuse, ktxVersion, compressionQuality, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias); //pathin, pathout, resolution, mipmaps, sampleCount
 
 	if (res != Result::Success)
 	{
