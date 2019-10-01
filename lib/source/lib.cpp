@@ -441,7 +441,8 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 
 	vkHelper vulkan;
 
-	if (vulkan.initialize(0u, 1u, true) != VK_SUCCESS)
+	const bool bDebug = false;
+	if (vulkan.initialize(0u, 1u, bDebug) != VK_SUCCESS)
 	{
 		return Result::VulkanInitializationFailed;
 	}

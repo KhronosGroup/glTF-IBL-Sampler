@@ -29,7 +29,11 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.apiVersion = VK_API_VERSION_1_0;
 
-		std::vector<const char*> layers = { "VK_LAYER_KHRONOS_validation" };
+		std::vector<const char*> layers;
+		if (_debugOutput)
+		{
+			layers.push_back("VK_LAYER_KHRONOS_validation");
+		}
 
 		uint32_t layerCount = 0u;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
