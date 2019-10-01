@@ -39,3 +39,19 @@ uint32_t IBLLib::vulkanToGlFormat(VkFormat vulkanFormat)
 	
 	return it->second.glFormat;
 }
+
+VkFormat IBLLib::glToVulkanFormat(uint32_t _glFormat)
+{
+	auto it = glFormatTable.begin();
+
+	while (it != glFormatTable.end())
+	{	 
+		if (it->second.glFormat == _glFormat)
+		{
+			return it->first;
+		}	 
+		it++;
+	}
+
+	return VK_FORMAT_UNDEFINED;
+}

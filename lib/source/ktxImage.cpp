@@ -1,6 +1,75 @@
 #include "ktxImage.h"
 #include "formatHelper.h"
 
+IBLLib::KtxImage::KtxImage()
+{
+}
+
+IBLLib::Result IBLLib::KtxImage::loadKtx1(const char* _pathIn)
+{
+	if (m_pTexture != nullptr)
+	{
+		return InvalidArgument;
+	}
+
+	FILE* file = fopen(_pathIn, "rb");
+	if (file == nullptr)
+	{
+		return FileNotFound;
+	}
+
+	ktxTexture1* pTexture1 = nullptr;
+	KTX_error_code result = ktxTexture1_CreateFromStdioStream(file,
+		KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT,
+		&pTexture1);
+	
+	fclose(file);
+	
+	if (result != KTX_SUCCESS)
+	{
+		printf("Failed loading ktx file\n");
+		printf("ktx: %s\n", ktxErrorString(result));
+		return KtxError;
+	}
+
+	m_pTexture = ktxTexture(pTexture1);
+	
+	return Success;
+}
+
+uint8_t* IBLLib::KtxImage::getData()
+{
+
+	if (m_pTexture == nullptr)
+	{
+		return nullptr;
+	}
+
+	ktx_uint8_t* data = nullptr;
+
+	data = ktxTexture_GetData(m_pTexture);
+
+	return static_cast<uint8_t*>(data);
+}
+
+
+ktxTexture1* IBLLib::KtxImage::getTexture1()
+{
+	if (m_pTexture == nullptr)
+	{
+		printf("Warning: uninitialized texture was fetched\n");
+	}
+
+	if(m_version!=Version::KTX1)
+	{ 
+		printf("Warning: wrong KTX version requested\n");
+		return nullptr;
+	}
+
+	return  reinterpret_cast<ktxTexture1*>(m_pTexture);
+}
+
+
 IBLLib::KtxImage::KtxImage(Version _version, uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap) :
 	m_version(_version)
 {
@@ -65,6 +134,7 @@ IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _in
 
 	if (result != KTX_SUCCESS)
 	{
+		printf("Failed setting ktx data\n");
 		printf("ktx: %s\n", ktxErrorString(result));
 		return KtxError;
 	}

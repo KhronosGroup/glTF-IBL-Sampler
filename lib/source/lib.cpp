@@ -5,6 +5,7 @@
 #include "FileHelper.h"
 #include "KtxImage.h"
 #include <vk_format_utils.h>
+#include "formatHelper.h"
 
 namespace IBLLib
 {
@@ -52,6 +53,119 @@ namespace IBLLib
 		_vulkan.transitionImageToTransferWrite(uploadCmds, _outImage);
 		_vulkan.copyBufferToBasicImage2D(uploadCmds, stagingBuffer, _outImage);
 		_vulkan.transitionImageToShaderRead(uploadCmds, _outImage);
+
+		if (_vulkan.endCommandBuffer(uploadCmds) != VK_SUCCESS)
+		{
+			return Result::VulkanError;
+		}
+
+		if (_vulkan.executeCommandBuffer(uploadCmds) != VK_SUCCESS)
+		{
+			return Result::VulkanError;
+		}
+
+		_vulkan.destroyBuffer(stagingBuffer);
+		_vulkan.destroyCommandBuffer(uploadCmds);
+
+		return Result::Success;
+	}
+
+	Result uploadKtxImage(vkHelper& _vulkan, const char* _inputPath, VkImage& _outImage)
+	{
+		_outImage = VK_NULL_HANDLE;
+		Result result = Result::Success;
+	
+		KtxImage ktxImage;
+		result = ktxImage.loadKtx1(_inputPath);
+		if (result != Success)
+		{
+			return Result::KtxError;
+		}
+		
+
+	
+		ktxTexture1* textureInformation = ktxImage.getTexture1();
+		const uint32_t dataByteSize = textureInformation->dataSize;
+		const uint32_t width = textureInformation->baseWidth;
+		const uint32_t height = textureInformation->baseHeight;
+		const uint32_t faces = textureInformation->isCubemap?6:1;
+		const uint32_t formatSize = FormatElementSize(  IBLLib::glToVulkanFormat(textureInformation->glInternalformat)  );
+		
+		uint32_t expectedSize = width * height * faces * formatSize;
+
+		if (dataByteSize != width * height * faces * formatSize)
+		{
+			printf("Error: input size mismatch\n");
+			return InvalidArgument;
+		}
+
+		uint8_t* data = ktxImage.getData();
+		
+		if(data == nullptr)
+		{
+			printf("Error: ktx data is nullptr\n");
+			return Result::KtxError;
+		}
+
+		VkCommandBuffer uploadCmds = VK_NULL_HANDLE;
+		if (_vulkan.createCommandBuffer(uploadCmds) != VK_SUCCESS)
+		{
+			return Result::VulkanError;
+		}
+
+		// create staging buffer for image data
+		VkBuffer stagingBuffer = VK_NULL_HANDLE;
+		if (_vulkan.createBufferAndAllocate(stagingBuffer, static_cast<uint32_t>(dataByteSize), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != VK_SUCCESS)
+		{
+			printf("Error: failed creating buffer\n");
+			return Result::VulkanError;
+		}
+
+		// transfer data to the host coherent staging buffer 
+		if (_vulkan.writeBufferData(stagingBuffer, data, dataByteSize) != VK_SUCCESS)
+		{
+			printf("Error: failed writing to buffer\n");
+			return Result::VulkanError;
+		}
+
+
+		// create the destination image we want to sample in the shader
+		if (_vulkan.createImage2DAndAllocate(_outImage, width, height, 
+			VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, //Format, Usage
+			1u, faces	//mipLevels, ArrayLayers
+			) != VK_SUCCESS)
+		{
+			return Result::VulkanError;
+		}
+
+		if (_vulkan.beginCommandBuffer(uploadCmds, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) != VK_SUCCESS)
+		{
+			return Result::VulkanError;
+		}
+
+		// transition to write dst layout
+
+		VkImageSubresourceRange subresourceRange{};
+		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceRange.baseMipLevel = 0;
+		subresourceRange.levelCount = 1;
+		subresourceRange.layerCount = faces;
+
+		_vulkan.imageBarrier(uploadCmds, _outImage,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0u,//src stage, access
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,//dst stage, access
+			subresourceRange);
+
+		
+		_vulkan.copyBufferToBasicImage2D(uploadCmds, stagingBuffer, _outImage);
+
+		_vulkan.imageBarrier(uploadCmds, _outImage,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,//src stage, access
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,//dst stage, access
+			subresourceRange);
+
 
 		if (_vulkan.endCommandBuffer(uploadCmds) != VK_SUCCESS)
 		{

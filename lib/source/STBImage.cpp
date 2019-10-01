@@ -32,6 +32,14 @@ IBLLib::Result IBLLib::STBImage::loadHdr(const char* _path)
 		return InvalidArgument;
 	}
 
+	int isHdrFile = stbi_is_hdr(_path); // 0 == false, 1 == true
+
+	if (isHdrFile == 0)
+	{
+		printf("Warning: input file is not HDR \n");
+		printf("Input will be converted to HDR \n");
+	}
+
 	// stbi_loadf
 	m_hdrData = stbi_loadf(_path, &m_width, &m_height, &m_channels, STBI_rgb_alpha);
 
@@ -55,7 +63,7 @@ size_t IBLLib::STBImage::getByteSize() const
 	if(m_isHdr)
 		return (size_t)m_width * (size_t)m_height * STBI_rgb_alpha * sizeof(float);
 	else
-		return (size_t)m_width * (size_t)m_height * STBI_rgb;
+		return (size_t)m_width * (size_t)m_height * STBI_rgb_alpha;
 }		
 
 IBLLib::Result IBLLib::STBImage::loadPng(const char* _path)
@@ -65,7 +73,7 @@ IBLLib::Result IBLLib::STBImage::loadPng(const char* _path)
 		return InvalidArgument;
 	}
 
-	m_byteData = stbi_load(_path, &m_width, &m_height, &m_channels, STBI_rgb);
+	m_byteData = stbi_load(_path, &m_width, &m_height, &m_channels, STBI_rgb_alpha);
 
 	if (m_byteData == nullptr)
 	{

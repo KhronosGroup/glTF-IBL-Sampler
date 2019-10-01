@@ -1162,7 +1162,7 @@ void IBLLib::vkHelper::copyBufferToBasicImage2D(VkCommandBuffer _cmdBuffer, VkBu
 			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			region.imageSubresource.mipLevel = 0u;
 			region.imageSubresource.baseArrayLayer = 0u;
-			region.imageSubresource.layerCount = 1u;
+			region.imageSubresource.layerCount = img.info.arrayLayers;// 1u;
 
 			region.imageOffset = { 0, 0, 0 };
 			region.imageExtent = img.info.extent;
