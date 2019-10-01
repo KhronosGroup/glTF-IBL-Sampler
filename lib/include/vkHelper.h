@@ -133,6 +133,7 @@ namespace IBLLib
 
 		void endRenderPass(VkCommandBuffer _cmdBuffer) const { vkCmdEndRenderPass(_cmdBuffer); };
 
+		void fillSamplerCreateInfo(VkSamplerCreateInfo& _samplerInfo);
 		VkResult createSampler(VkSampler& _outSampler, VkSamplerCreateInfo _info);
 
 		const VkImageCreateInfo* getCreateInfo(const VkImage _image);

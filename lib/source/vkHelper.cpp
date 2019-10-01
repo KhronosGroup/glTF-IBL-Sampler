@@ -1300,6 +1300,27 @@ void IBLLib::vkHelper::beginRenderPass(VkCommandBuffer _cmdBuffer, VkRenderPass 
 	vkCmdBeginRenderPass(_cmdBuffer, &info, _contents);
 }
 
+void IBLLib::vkHelper::fillSamplerCreateInfo(VkSamplerCreateInfo& _samplerInfo)
+{
+	_samplerInfo.magFilter = VK_FILTER_LINEAR;
+	_samplerInfo.minFilter = VK_FILTER_LINEAR;
+	_samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+	_samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+	_samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT; 
+	
+	_samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	_samplerInfo.mipLodBias = 0.f;
+	_samplerInfo.minLod = 0.f;
+	_samplerInfo.maxLod = 1.f;
+	
+	_samplerInfo.anisotropyEnable = VK_FALSE;
+	_samplerInfo.maxAnisotropy = 0.f;
+	_samplerInfo.compareEnable = VK_FALSE;
+	_samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	
+	_samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+}
+
 VkResult IBLLib::vkHelper::createSampler(VkSampler& _outSampler, VkSamplerCreateInfo _info)
 {
 	if (m_logicalDevice == VK_NULL_HANDLE)
