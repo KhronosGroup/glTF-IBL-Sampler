@@ -34,6 +34,8 @@ IBLLib::Result IBLLib::KtxImage::loadKtx1(const char* _pathIn)
 
 	m_pTexture = ktxTexture(pTexture1);
 	
+	printf("Ktx1 file loaded: %s\n",_pathIn);
+
 	return Success;
 }
 
