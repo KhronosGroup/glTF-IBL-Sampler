@@ -1599,9 +1599,12 @@ void IBLLib::GraphicsPipelineDesc::addVertexBinding(uint32_t _binding, uint32_t 
 	info.stride = _stride;
 }
 
-void IBLLib::GraphicsPipelineDesc::addColorBlendAttachment(VkPipelineColorBlendAttachmentState& _attachment)
+void IBLLib::GraphicsPipelineDesc::addColorBlendAttachment(const VkPipelineColorBlendAttachmentState& _attachment, const uint32_t _count)
 {
-	m_colorBlendAttachments.push_back(_attachment);
+	for (uint32_t i = 0; i < _count; ++i)
+	{
+		m_colorBlendAttachments.push_back(_attachment);
+	}
 }
 
 

@@ -4,7 +4,6 @@
 namespace IBLLib
 {
 
-
 	enum OutputFormat
 	{
 		R8G8B8A8_UNORM = 37,
