@@ -106,6 +106,12 @@ namespace IBLLib
 		}
 	
 		ktxTexture1* textureInformation = ktxImage.getTexture1();
+		if(textureInformation == nullptr)
+		{
+			printf("Error: failed to get texture information\n");
+			return KtxError;
+		}
+
 		const uint32_t dataByteSize = textureInformation->dataSize;
 		const uint32_t width = textureInformation->baseWidth;
 		const uint32_t height = textureInformation->baseHeight;
@@ -113,6 +119,12 @@ namespace IBLLib
 		const VkFormat vkFormat = IBLLib::glToVulkanFormat(textureInformation->glInternalformat);
 		const uint32_t formatSize = FormatElementSize(vkFormat);
 		
+		if(textureInformation->numLevels>1)
+		{
+			printf("Error: unexpected mip levels\n");
+			return InvalidArgument;
+		}
+
 		if(vkFormat==VK_FORMAT_UNDEFINED)
 		{
 			printf("Error: VkFormat of ktx file not supported\n");
@@ -674,7 +686,8 @@ namespace IBLLib
 	}
 
 
-	} // !IBLLib
+} // !IBLLib
+
 
 IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpecular, const char* _outputPathDiffuse, unsigned int _ktxVersion, unsigned int _ktxCompressionQuality, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat, float _lodBias, bool _inputIsCubeMap)
 {
@@ -865,25 +878,24 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// Specular Filter CubeMap
-	VkDescriptorSet specularDescriptorSet = VK_NULL_HANDLE;
-	VkPipelineLayout specularFilterPipelineLayout = VK_NULL_HANDLE;
+	VkDescriptorSet filterDescriptorSet = VK_NULL_HANDLE;
+	VkPipelineLayout filterPipelineLayout = VK_NULL_HANDLE;
 	VkPipeline specularFilterPipeline = VK_NULL_HANDLE;
-
 	{
-		DescriptorSetInfo setLayout1;
+		DescriptorSetInfo setLayout0;
 		uint32_t binding = 1u;
-		setLayout1.addCombinedImageSampler(cubeMipMapSampler, inputCubeMapCompleteView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, binding, VK_SHADER_STAGE_FRAGMENT_BIT); // change sampler ?
+		setLayout0.addCombinedImageSampler(cubeMipMapSampler, inputCubeMapCompleteView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, binding, VK_SHADER_STAGE_FRAGMENT_BIT); // change sampler ?
 		//Binding ist set to 1!!
 
 		VkDescriptorSetLayout specularSetLayout = VK_NULL_HANDLE;
-		if (setLayout1.create(vulkan, specularSetLayout, specularDescriptorSet) != VK_SUCCESS)
+		if (setLayout0.create(vulkan, specularSetLayout, filterDescriptorSet) != VK_SUCCESS)
 		{
 			return Result::VulkanError;
 		}
 
-		vulkan.updateDescriptorSets(setLayout1.getWrites());
+		vulkan.updateDescriptorSets(setLayout0.getWrites());
 
-		if (vulkan.createPipelineLayout(specularFilterPipelineLayout, specularSetLayout, ranges) != VK_SUCCESS)
+		if (vulkan.createPipelineLayout(filterPipelineLayout, specularSetLayout, ranges) != VK_SUCCESS)
 		{
 			return Result::VulkanError;
 		}
@@ -894,7 +906,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		filterCubeMapPipelineDesc.addShaderStage(filterCubeMapSpecular, VK_SHADER_STAGE_FRAGMENT_BIT, "filterCubeMapSpecular");
 
 		filterCubeMapPipelineDesc.setRenderPass(renderPass);
-		filterCubeMapPipelineDesc.setPipelineLayout(specularFilterPipelineLayout);
+		filterCubeMapPipelineDesc.setPipelineLayout(filterPipelineLayout);
 
 		for (int face = 0; face < 6; ++face)
 		{
@@ -923,36 +935,15 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 	////////////////////////////////////////////////////////////////////////////////////////
 	// Diffuse Filter 
 	VkPipeline diffuseFilterPipeline = VK_NULL_HANDLE;
-	VkPipelineLayout diffuseFilterPipelineLayout = VK_NULL_HANDLE;
-	VkDescriptorSet diffuseDescriptorSet = VK_NULL_HANDLE;
 	{
-		//
-		// Create pipeline layout
-		//
-		VkDescriptorSetLayout diffuseSetLayout = VK_NULL_HANDLE;
-		DescriptorSetInfo setLayout0;
-		uint32_t binding = 1u;
-		setLayout0.addCombinedImageSampler(cubeMipMapSampler, inputCubeMapCompleteView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, binding);
-
-		if (setLayout0.create(vulkan, diffuseSetLayout, diffuseDescriptorSet) != VK_SUCCESS)
-		{
-			return Result::VulkanError;
-		}
-
-		vulkan.updateDescriptorSets(setLayout0.getWrites());
-
-		if (vulkan.createPipelineLayout(diffuseFilterPipelineLayout, diffuseSetLayout, ranges) != VK_SUCCESS)
-		{
-			return Result::VulkanError;
-		}
-
 		GraphicsPipelineDesc diffuseFilterPipelineDesc;
 
 		diffuseFilterPipelineDesc.addShaderStage(fullscreenVertexShader, VK_SHADER_STAGE_VERTEX_BIT, "main");
 		diffuseFilterPipelineDesc.addShaderStage(filterCubeMapDiffuse, VK_SHADER_STAGE_FRAGMENT_BIT, "filterCubeMapDiffuse");
 
 		diffuseFilterPipelineDesc.setRenderPass(renderPass);
-		diffuseFilterPipelineDesc.setPipelineLayout(diffuseFilterPipelineLayout);
+		diffuseFilterPipelineDesc.setPipelineLayout(filterPipelineLayout);
+
 
 		for (int face = 0; face < 6; ++face)
 		{
@@ -1012,20 +1003,21 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 	}
 
 
-
 	////////////////////////////////////////////////////////////////////////////////////////
 	//Generate MipLevels
 	printf("Generating mipmap levels\n");
 	generateMipmapLevels(vulkan, cubeMapCmd, inputCubeMap, maxMipLevels, cubeMapSideLength, currentInputCubeMapLayout);
 	currentInputCubeMapLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
+
 	// Filter specular
 	printf("Filtering specular term\n");
-	vulkan.bindDescriptorSet(cubeMapCmd, specularFilterPipelineLayout, specularDescriptorSet);
+	vulkan.bindDescriptorSet(cubeMapCmd, filterPipelineLayout, filterDescriptorSet);
 
 	vkCmdBindPipeline(cubeMapCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, specularFilterPipeline);
 
 	unsigned int currentFramebufferSideLength = cubeMapSideLength;
+
 	//Filter every mip level: from inputCubeMap->currentMipLevel
 	for (uint32_t currentMipLevel = 0; currentMipLevel < outputMipLevels; currentMipLevel++)
 	{
@@ -1051,7 +1043,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		values.width = cubeMapSideLength;
 		values.lodBias = _lodBias;
 
-		vkCmdPushConstants(cubeMapCmd, specularFilterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
+		vkCmdPushConstants(cubeMapCmd, filterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
 	
 		vulkan.beginRenderPass(cubeMapCmd, renderPass, cubeMapOutputFramebuffer, VkRect2D{ 0u, 0u, currentFramebufferSideLength, currentFramebufferSideLength }, clearValues);
 		vkCmdDraw(cubeMapCmd, 3, 1u, 0, 0);
@@ -1079,7 +1071,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 			subresourceRange);
 
 
-		vulkan.bindDescriptorSet(cubeMapCmd, diffuseFilterPipelineLayout, diffuseDescriptorSet);
+		vulkan.bindDescriptorSet(cubeMapCmd, filterPipelineLayout, filterDescriptorSet);
 
 		vkCmdBindPipeline(cubeMapCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, diffuseFilterPipeline);
 		
@@ -1090,7 +1082,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		values.width = cubeMapSideLength;
 		values.lodBias = _lodBias;
 
-		vkCmdPushConstants(cubeMapCmd, diffuseFilterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
+		vkCmdPushConstants(cubeMapCmd, filterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
 
 		vulkan.beginRenderPass(cubeMapCmd, renderPass, diffuseCubeMapFramebuffer, VkRect2D{ 0u, 0u, cubeMapSideLength, cubeMapSideLength }, clearValues);
 		vkCmdDraw(cubeMapCmd, 3, 1u, 0, 0);
@@ -1101,7 +1093,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 	//Output
 
 	VkFormat targetFormat = static_cast<VkFormat>(_targetFormat);
-	VkImageLayout currentSpecularCubeMapImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;// VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	VkImageLayout currentSpecularCubeMapImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	VkImageLayout currentDiffuseCubeMapImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkImage convertedSpecularCubeMap = VK_NULL_HANDLE;
