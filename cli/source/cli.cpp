@@ -18,6 +18,7 @@ int main(int argc, char* argv[])
 	OutputFormat targetFormat = R16G16B16A16_SFLOAT;
 	float lodBias = 1.0f;
 	bool inputIsCubeMap = false;
+	bool enableDebugOutput = false;
 
 	for (int i = 1; i+1 < argc; i += 2)
 	{
@@ -91,6 +92,11 @@ int main(int argc, char* argv[])
 			inputIsCubeMap = true;
 			printf("inputIsCubeMap flag is set.\n");
 		}
+		else if (strcmp(argv[i], "-debug") == 0)
+		{
+			enableDebugOutput = true;
+			printf("debug flag is set.\n");
+		}
 		else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-help") == 0)
 		{
 			printf("glTFIBLSampler\n");
@@ -150,7 +156,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	Result res = sample(pathIn, pathOutSpecular, pathOutDiffuse, ktxVersion, compressionQuality, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, inputIsCubeMap); 
+	Result res = sample(pathIn, pathOutSpecular, pathOutDiffuse, ktxVersion, compressionQuality, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, inputIsCubeMap, enableDebugOutput);
 
 	if (res != Result::Success)
 	{

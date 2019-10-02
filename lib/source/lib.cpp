@@ -689,7 +689,7 @@ namespace IBLLib
 } // !IBLLib
 
 
-IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpecular, const char* _outputPathDiffuse, unsigned int _ktxVersion, unsigned int _ktxCompressionQuality, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat, float _lodBias, bool _inputIsCubeMap)
+IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpecular, const char* _outputPathDiffuse, unsigned int _ktxVersion, unsigned int _ktxCompressionQuality, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat, float _lodBias, bool _inputIsCubeMap, bool _debugOutput)
 {
 	const VkFormat cubeMapFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 	const uint32_t cubeMapSideLength = _cubemapResolution;
@@ -709,8 +709,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 
 	vkHelper vulkan;
 
-	const bool bDebug = true;
-	if (vulkan.initialize(0u, 1u, bDebug) != VK_SUCCESS)
+	if (vulkan.initialize(0u, 1u, _debugOutput) != VK_SUCCESS)
 	{
 		return Result::VulkanInitializationFailed;
 	}
