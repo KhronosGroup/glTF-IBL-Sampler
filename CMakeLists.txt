@@ -66,14 +66,9 @@ add_include_folder("lib/include" "lib_includes")
 set(STB_INCLUDE_PATH "${CMAKE_CURRENT_LIST_DIR}/thirdparty/stb/" CACHE STRING "")
 set(lib_includes "${lib_includes};${STB_INCLUDE_PATH}")
 
-# KTX2
-set(KTX2_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/thirdparty/ktx2/include/" CACHE STRING "")
-set(lib_includes "${lib_includes};${KTX2_INCLUDE_DIR}")
-set(KTX2_LIBRARY "NOTFOUND" CACHE STRING "")
-
-if (NOT EXISTS ${KTX2_LIBRARY})
-	message(SEND_ERROR "KTX2_LIBRARY (libktx.gl) not found at '${KTX2_LIBRARY}'")
-endif()
+# TINYKTX
+set(TINYKTX_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/thirdparty/tiny_ktx/include/" CACHE STRING "")
+set(lib_includes "${lib_includes};${TINYKTX_INCLUDE_DIR}")
 
 #cli sources
 add_sources("cli/source/*.cpp" "cli_sources")
@@ -88,7 +83,6 @@ target_link_libraries(lib PRIVATE "${Vulkan_LIBRARIES}")
 
 find_package(Glslang REQUIRED)
 target_link_libraries(lib PRIVATE glslang SPIRV)
-target_link_libraries(lib PRIVATE ${KTX2_LIBRARY})
 #source_group("include" FILES ${lib_includes})
 
 #cli project

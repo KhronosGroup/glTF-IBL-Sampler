@@ -2,7 +2,8 @@
 
 #include <vector>
 #include <vulkan/vulkan.h>
-#include <ktx.h>
+#define TINYKTX_IMPLEMENTATION
+#include <tiny_ktx/tinyktx2.h>
 #include "ResultType.h"
 
 namespace IBLLib
