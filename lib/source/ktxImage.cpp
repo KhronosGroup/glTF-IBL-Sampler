@@ -6,10 +6,8 @@ IBLLib::KtxImage::KtxImage() : m_slimKTX2(ux3d::slimktx2::Callbacks())
 
 uint8_t* IBLLib::KtxImage::getData()
 {
-
-	
 	uint8_t* data = nullptr;
-	//data = ktxTexture_GetData(m_pTexture);
+	data = m_slimKTX2.getContainerPointer();
 	return static_cast<uint8_t*>(data);
 }
 
