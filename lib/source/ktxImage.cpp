@@ -13,7 +13,19 @@ uint8_t* IBLLib::KtxImage::getData()
 
 IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
 {
-	return Result::KtxError;
+	FILE* pFile = fopen(_pFilePath, "r");
+
+	if (pFile == NULL)
+	{
+		Result::FileNotFound;
+	}
+
+	if (m_slimKTX2.parse(pFile) != ux3d::slimktx2::Result::Success)
+	{
+		Result::KtxError;
+	}
+
+	Result::Success;
 }
 
 IBLLib::KtxImage::KtxImage(Version _version, uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap) :
