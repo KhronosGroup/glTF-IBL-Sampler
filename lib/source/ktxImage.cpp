@@ -74,15 +74,18 @@ IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 
 	if (pFile == NULL)
 	{
-		Result::FileNotFound;
+		return Result::FileNotFound;
 	}
 
 	if (ux3d::slimktx2::Result::Success != m_slimKTX2.serialize(pFile))
 	{
-		Result::KtxError;
+		fclose(pFile);
+		return Result::KtxError;
 	}
 
 	printf("Ktx file successfully written to: %s\n", _pathOut);
+
+	fclose(pFile);
 	return Success;
 }
 
