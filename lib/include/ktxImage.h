@@ -30,18 +30,9 @@ namespace IBLLib
 		uint32_t m_levels = 0u;
 		bool m_isCubeMap = false;
 
-		ux3d::slimktx2::Callbacks m_callbacks =
-		{
-			nullptr,
-			nullptr,
-			nullptr,
-			nullptr,
-			&writeToFile
-		};
-
 		static void writeToFile(void* _pUserData, void* _file, const void* _pData, size_t _size);
-		static void* allocate(size_t _size);
-		static void deallocate(void* _pData);
+		static void* allocate(void* _pUserData, size_t _size);
+		static void deallocate(void* _pUserData, void* _pData);
 	};
 
 } // !IBLLIb

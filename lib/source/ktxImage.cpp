@@ -1,6 +1,13 @@
 #include "ktxImage.h"
 
-IBLLib::KtxImage::KtxImage() : m_slimKTX2(m_callbacks)
+IBLLib::KtxImage::KtxImage() : 
+	m_slimKTX2({
+		nullptr,
+		&allocate,
+		&deallocate,
+		nullptr,
+		&writeToFile
+	})
 {
 }
 
@@ -29,7 +36,13 @@ IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
 }
 
 IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap) :
-	m_slimKTX2(m_callbacks),
+	m_slimKTX2({
+			nullptr,
+			&allocate,
+			&deallocate,
+			nullptr,
+			&writeToFile
+		}),
 	m_width(_width),
 	m_height(_height),
 	m_vkFormat(_vkFormat),
@@ -82,12 +95,12 @@ IBLLib::KtxImage::~KtxImage()
 {
 }
 
-void* IBLLib::KtxImage::allocate(size_t _size)
+void* IBLLib::KtxImage::allocate(void* _pUserData, size_t _size)
 {
 	return malloc(_size);
 }
 
-void IBLLib::KtxImage::deallocate(void* _pData)
+void IBLLib::KtxImage::deallocate(void* _pUserData, void* _pData)
 {
 	free(_pData);
 }
