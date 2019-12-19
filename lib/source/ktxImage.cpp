@@ -30,9 +30,12 @@ IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _in
 	// ToDo: check data size with createInfo
 	//(m_createInfo.baseHeight * m_createInfo.baseWidth)>> _level
 
-	//todo
+	if (m_slimKTX2.setImage(static_cast<const void*>(_inData.data()), _inData.size(), _level, _side, 0u) != ux3d::slimktx2::Result::Success)
+	{
+		return KtxError;
+	}
 
-	return IBLLib::KtxError;
+	return Success;
 }
 
 
