@@ -5,9 +5,6 @@
 	path = thirdparty/ktx2
 	url = https://github.com/KhronosGroup/KTX-Software.git
 	branch = ktx2
-[submodule "thirdparty/tiny_ktx"]
-	path = thirdparty/tiny_ktx
-	url = git@github.com:ux3d/tiny_ktx
 [submodule "thirdparty/slimktx2"]
 	path = thirdparty/slimktx2
 	url = git@github.com:ux3d/slimktx2.git
