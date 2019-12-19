@@ -39,10 +39,25 @@ IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _in
 
 IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 {	
-	
-	printf("Ktx file successfully written to: %s\n", _pathOut);
+	if (ux3d::slimktx2::Result::Success != m_slimKTX2.allocateContainer())
+	{
+		Result::KtxError;
+	}
 
-	return IBLLib::KtxError;
+	FILE* pFile = fopen(_pathOut, "w");
+
+	if (pFile == NULL)
+	{
+		Result::FileNotFound;
+	}
+
+	if (ux3d::slimktx2::Result::Success != m_slimKTX2.serialize(pFile))
+	{
+		Result::KtxError;
+	}
+
+	printf("Ktx file successfully written to: %s\n", _pathOut);
+	return Success;
 }
 
 void writeToFile(void* _pUserData, void* _file, const void* _pData, size_t _size)
