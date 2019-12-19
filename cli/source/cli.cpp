@@ -7,7 +7,7 @@ using namespace IBLLib;
 
 int main(int argc, char* argv[])
 {
-	const char* pathIn = "panorama.hdr";
+	const char* pathIn = nullptr;
 	const char* pathOutSpecular = nullptr;
 	const char* pathOutDiffuse = nullptr;
 	unsigned int sampleCount = 1024u;
@@ -71,12 +71,12 @@ int main(int argc, char* argv[])
 				targetFormat = R8G8B8A8_UNORM;
 				printf("targetFormat set to R8G8B8A8_UNORM \n");
 			}
-			if (strcmp(targetFormatString, "R16G16B16A16_SFLOAT") == 0)
+			else if (strcmp(targetFormatString, "R16G16B16A16_SFLOAT") == 0)
 			{
 				targetFormat = R16G16B16A16_SFLOAT;
 				printf("targetFormat set to R16G16B16A16_SFLOAT \n");
 			}
-			if (strcmp(targetFormatString, "R32G32B32A32_SFLOAT") == 0)
+			else if (strcmp(targetFormatString, "R32G32B32A32_SFLOAT") == 0)
 			{
 				targetFormat = R32G32B32A32_SFLOAT;
 				printf("targetFormat set to R32G32B32A32_SFLOAT \n");
@@ -90,11 +90,13 @@ int main(int argc, char* argv[])
 		else if (strcmp(argv[i], "-inputIsCubeMap") == 0)
 		{
 			inputIsCubeMap = true;
+			i -= 1;
 			printf("inputIsCubeMap flag is set.\n");
 		}
 		else if (strcmp(argv[i], "-debug") == 0)
 		{
 			enableDebugOutput = true;
+			i -= 1;
 			printf("debug flag is set.\n");
 		}
 		else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-help") == 0)
@@ -114,6 +116,8 @@ int main(int argc, char* argv[])
 			printf("-inputIsCubeMap: if set, a cube map in ktx1 format is expected at input path \n");
 
 			printf("\n");
+
+			return 0;
 		}
 	}
 
