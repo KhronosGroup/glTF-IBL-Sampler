@@ -24,6 +24,7 @@ IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
 
 	if (pFile == NULL)
 	{
+		printf("Could not open file '%s'\n", _pFilePath);
 		return Result::FileNotFound;
 	}
 

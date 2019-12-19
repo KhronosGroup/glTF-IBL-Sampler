@@ -431,7 +431,9 @@ namespace IBLLib
 						return Result::VulkanError;
 					}
 
-					res = ktxImage.writeFace(imageData, face, level);
+					uint32_t ktxLevelIndex = mipLevels - 1 - level;
+					res = ktxImage.writeFace(imageData, face, ktxLevelIndex);
+
 					if (res != Result::Success)
 					{
 						return res;
