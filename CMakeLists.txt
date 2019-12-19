@@ -66,9 +66,9 @@ add_include_folder("lib/include" "lib_includes")
 set(STB_INCLUDE_PATH "${CMAKE_CURRENT_LIST_DIR}/thirdparty/stb/" CACHE STRING "")
 set(lib_includes "${lib_includes};${STB_INCLUDE_PATH}")
 
-# TINYKTX
-set(TINYKTX_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/thirdparty/tiny_ktx/include/" CACHE STRING "")
-set(lib_includes "${lib_includes};${TINYKTX_INCLUDE_DIR}")
+# SLIMKTX2
+set(SLIMKTX2_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/thirdparty/slimktx2/include/" CACHE STRING "")
+set(lib_includes "${lib_includes};${SLIMKTX2_INCLUDE_DIR}")
 
 #cli sources
 add_sources("cli/source/*.cpp" "cli_sources")
