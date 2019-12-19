@@ -17,22 +17,25 @@ IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
 
 	if (pFile == NULL)
 	{
-		Result::FileNotFound;
+		return Result::FileNotFound;
 	}
 
 	if (m_slimKTX2.parse(pFile) != ux3d::slimktx2::Result::Success)
 	{
-		Result::KtxError;
+		return Result::KtxError;
 	}
 
-	Result::Success;
+	return Result::Success;
 }
 
-IBLLib::KtxImage::KtxImage(Version _version, uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap) :
-	m_version(_version),
-	m_slimKTX2(ux3d::slimktx2::Callbacks())
+IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap) :
+	m_slimKTX2(ux3d::slimktx2::Callbacks()),
+	m_width(_width),
+	m_height(_height),
+	m_vkFormat(_vkFormat),
+	m_levels(_levels),
+	m_isCubeMap(_isCubeMap)
 {
-
 }
 
 IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _inData, uint32_t _side, uint32_t _level)
@@ -72,7 +75,7 @@ IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 	return Success;
 }
 
-void writeToFile(void* _pUserData, void* _file, const void* _pData, size_t _size)
+void IBLLib::KtxImage::writeToFile(void* _pUserData, void* _file, const void* _pData, size_t _size)
 {
 	FILE* pFile = static_cast<FILE*>(_file);
 	fwrite(_pData, sizeof(uint8_t), _size, pFile);

@@ -301,7 +301,7 @@ namespace IBLLib
 		return Result::Success;
 	}
 
-	Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const char* _outputPath, KtxImage::Version _ktxVersion, unsigned int _ktxCompressionQuality, const VkImageLayout inputImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const char* _outputPath, unsigned int _ktxCompressionQuality, const VkImageLayout inputImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 	{
 		const VkImageCreateInfo* pInfo = _vulkan.getCreateInfo(_srcImage);
 		if (pInfo == nullptr)
@@ -411,7 +411,7 @@ namespace IBLLib
 		// Image is copied to buffer
 		// Now map buffer and copy to ram
 		{
-			KtxImage ktxImage(_ktxVersion, cubeMapSideLength, cubeMapSideLength, cubeMapFormat, mipLevels, true);
+			KtxImage ktxImage(cubeMapSideLength, cubeMapSideLength, cubeMapFormat, mipLevels, true);
 
 			std::vector<unsigned char> imageData;
 
@@ -1067,27 +1067,15 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 	if (vulkan.executeCommandBuffer(cubeMapCmd) != VK_SUCCESS)
 	{
 		return Result::VulkanError;
-	}	
-	
-	KtxImage::Version ktxImageVersion = KtxImage::Version::KTX1;
-
-	switch (_ktxVersion)
-	{
-	case 1:
-		ktxImageVersion = KtxImage::Version::KTX1;
-		break;
-	case 2:
-		ktxImageVersion = KtxImage::Version::KTX2;
-		break;
 	}
 
-	if (downloadCubemap(vulkan, convertedSpecularCubeMap, _outputPathSpecular, ktxImageVersion, _ktxCompressionQuality, currentSpecularCubeMapImageLayout) != VK_SUCCESS)
+	if (downloadCubemap(vulkan, convertedSpecularCubeMap, _outputPathSpecular, _ktxCompressionQuality, currentSpecularCubeMapImageLayout) != VK_SUCCESS)
 	{
 		printf("Failed to download Image \n");
 		return Result::VulkanError;
 	}
 
-	if (downloadCubemap(vulkan, convertedDiffuseCubeMap, _outputPathDiffuse, ktxImageVersion, _ktxCompressionQuality, currentDiffuseCubeMapImageLayout) != VK_SUCCESS)
+	if (downloadCubemap(vulkan, convertedDiffuseCubeMap, _outputPathDiffuse, _ktxCompressionQuality, currentDiffuseCubeMapImageLayout) != VK_SUCCESS)
 	{
 		printf("Failed to download Image \n");
 		return Result::VulkanError;
