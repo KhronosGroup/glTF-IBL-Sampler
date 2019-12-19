@@ -1,123 +1,24 @@
 #include "ktxImage.h"
 #include "formatHelper.h"
 
-IBLLib::KtxImage::KtxImage()
+IBLLib::KtxImage::KtxImage() : m_slimKTX2(ux3d::slimktx2::Callbacks())
 {
-}
-
-IBLLib::Result IBLLib::KtxImage::loadKtx1(const char* _pathIn)
-{
-	if (m_pTexture != nullptr)
-	{
-		return InvalidArgument;
-	}
-
-	FILE* file = fopen(_pathIn, "rb");
-	if (file == nullptr)
-	{
-		return FileNotFound;
-	}
-
-	ktxTexture1* pTexture1 = nullptr;
-	KTX_error_code result = ktxTexture1_CreateFromStdioStream(file,
-		KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT,
-		&pTexture1);
-	
-	fclose(file);
-	
-	if (result != KTX_SUCCESS)
-	{
-		printf("Failed loading ktx file\n");
-		printf("ktx: %s\n", ktxErrorString(result));
-		return KtxError;
-	}
-
-	m_pTexture = ktxTexture(pTexture1);
-	
-	printf("Ktx1 file loaded: %s\n",_pathIn);
-
-	return Success;
 }
 
 uint8_t* IBLLib::KtxImage::getData()
 {
 
-	if (m_pTexture == nullptr)
-	{
-		return nullptr;
-	}
-
-	ktx_uint8_t* data = nullptr;
-
-	data = ktxTexture_GetData(m_pTexture);
-
+	
+	uint8_t* data = nullptr;
+	//data = ktxTexture_GetData(m_pTexture);
 	return static_cast<uint8_t*>(data);
 }
 
-
-ktxTexture1* IBLLib::KtxImage::getTexture1()
-{
-	if (m_pTexture == nullptr)
-	{
-		printf("Warning: uninitialized texture was fetched\n");
-	}
-
-	if(m_version!=Version::KTX1)
-	{ 
-		printf("Warning: wrong KTX version requested\n");
-		return nullptr;
-	}
-
-	return  reinterpret_cast<ktxTexture1*>(m_pTexture);
-}
-
-
 IBLLib::KtxImage::KtxImage(Version _version, uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap) :
-	m_version(_version)
+	m_version(_version),
+	m_slimKTX2(ux3d::slimktx2::Callbacks())
 {
 
-	m_createInfo.baseWidth = _width;
-	m_createInfo.baseHeight = _height;
-	m_createInfo.baseDepth = 1u;
-	m_createInfo.numDimensions = 2u;
-	
-	m_createInfo.numLevels = _levels;
-	m_createInfo.numLayers = 1u;
-	m_createInfo.numFaces = _isCubeMap ? 6u : 1u;
-	m_createInfo.isArray = KTX_FALSE;
-	m_createInfo.generateMipmaps = KTX_FALSE;
-
-	m_createInfo.vkFormat = _vkFormat;
-	m_createInfo.glInternalformat = IBLLib::vulkanToGlFormat(_vkFormat);
-
-	ktxTexture1* pTexture1 = nullptr;
-	ktxTexture2* pTexture2 = nullptr;
-
-	KTX_error_code result = KTX_SUCCESS;
-	
-	switch (_version)
-	{
-	case Version::KTX1:
-		result = ktxTexture1_Create(&m_createInfo, KTX_TEXTURE_CREATE_ALLOC_STORAGE, &pTexture1);
-		m_pTexture = ktxTexture(pTexture1);
-		break;
-	case Version::KTX2:
-		result = ktxTexture2_Create(&m_createInfo, KTX_TEXTURE_CREATE_ALLOC_STORAGE, &pTexture2);
-		if (result == KTX_SUCCESS)
-		{ 
-			const char name[] = "glTFIBLSampler";
-			ktxHashList_AddKVPair(&pTexture2->kvDataHead, KTX_WRITER_KEY, sizeof(name), name);
-			m_pTexture = ktxTexture(pTexture2);
-		}
-		break;
-	}
-
-	if (result != KTX_SUCCESS)
-	{
-		ktxTexture_Destroy(m_pTexture);
-		m_pTexture = nullptr;
-		printf("ktx: %s\n", ktxErrorString(result));
-	}
 }
 
 IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _inData, uint32_t _side, uint32_t _level)
@@ -125,107 +26,20 @@ IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _in
 	// ToDo: check data size with createInfo
 	//(m_createInfo.baseHeight * m_createInfo.baseWidth)>> _level
 
-	if (m_pTexture == nullptr || _inData.empty())
-	{
-		return InvalidArgument;
-	}
+	//todo
 
-	const uint32_t  layer = 0u;// we have no array, just cubemap sides
-
-	KTX_error_code result = ktxTexture_SetImageFromMemory(m_pTexture, _level, layer, _side, _inData.data(), _inData.size() );
-
-	if (result != KTX_SUCCESS)
-	{
-		printf("Failed setting ktx data\n");
-		printf("ktx: %s\n", ktxErrorString(result));
-		return KtxError;
-	}
-
-	return Success;
+	return IBLLib::KtxError;
 }
 
-IBLLib::Result IBLLib::KtxImage::compress(ktxBasisParams _params)
-{
-	if (m_pTexture == nullptr)
-	{
-		return InvalidArgument;
-	}
-
-	if (m_version != Version::KTX2)
-	{
-		return KtxError;
-	}
-
-	printf("Compressing ...\n");
-
-	KTX_error_code result = ktxTexture2_CompressBasisEx(reinterpret_cast<ktxTexture2*>(m_pTexture), &_params);
-
-	if (result != KTX_SUCCESS)
-	{
-		ktxTexture_Destroy(ktxTexture(m_pTexture));
-		printf("Compression failed \n");
-		printf("ktx: %s\n", ktxErrorString(result));
-		m_pTexture = nullptr;
-		return KtxError;
-	}
-	
-	return Success;
-}
-
-IBLLib::Result IBLLib::KtxImage::compress(unsigned int _qualityLevel)
-{
-	ktxBasisParams ktxParams{};
-	ktxParams.structSize = sizeof(ktxBasisParams);
-	ktxParams.threadCount = 1;
-	ktxParams.compressionLevel = 1;	//encoding speed vs. quality - Range is 0 - 5, default is 1. Higher values are slower, but give higher quality
-	ktxParams.qualityLevel = _qualityLevel;	// Range is 1 - 255 Lower gives better	compression/lower quality/faster
-	ktxParams.maxEndpoints = 0;		//set the maximum number of color endpoint clusters	from 1 - 16128. Default is 0
-	ktxParams.endpointRDOThreshold = 1.25f;//Lower is higher quality but less quality per output bit(try 1.0 - 3.0)
-	ktxParams.maxSelectors = 0;		//Manually set the maximum number of color selector clusters from 1 - 16128. Default is 0, unset.
-	ktxParams.selectorRDOThreshold = 1.5f;//Set selector RDO quality threshold. The default is 1.5. Lower is higher quality but less quality per output bit(try 1.0 - 3.0).
-	ktxParams.normalMap = false;
-	ktxParams.separateRGToRGB_A = false;
-	ktxParams.preSwizzle = false;
-	ktxParams.noEndpointRDO = false;
-	ktxParams.noSelectorRDO = false;
-
-	return compress(ktxParams);
-}
 
 IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 {	
-	if (m_pTexture == nullptr)
-	{
-		return InvalidArgument;
-	}
-
-	FILE* outFile = fopen(_pathOut, "wb");
-
-	if (outFile == nullptr)
-	{
-		printf("ktx: failed to open file %s\n", _pathOut);
-		return FileNotFound;
-	}
-
-	KTX_error_code result = ktxTexture_WriteToStdioStream(m_pTexture, outFile);
-	fclose(outFile);
-
-	if (result != KTX_SUCCESS)
-	{
-		printf("ktx: %s\n", ktxErrorString(result));
-		return KtxError;
-	}
 	
 	printf("Ktx file successfully written to: %s\n", _pathOut);
 
-	return Success;
+	return IBLLib::KtxError;
 }
 
 IBLLib::KtxImage::~KtxImage()
 {
-	if (m_pTexture != nullptr)
-	{
-		ktxTexture_Destroy(m_pTexture);
-		m_pTexture = nullptr;
-	}
 }

@@ -22,9 +22,9 @@ macro(add_sources expression sources)
 endmacro()
 
 #lib sources
-add_sources("source/*.cpp" "lib_sources")
-add_sources("include/*.h" "lib_sources")
+add_sources("source/*.cpp" "slimktx2_source")
+add_sources("include/*.h" "slimktx2_source")
 
 #lib project
-add_library(${PROJECT_NAME} SHARED ${lib_sources})
+add_library(${PROJECT_NAME} SHARED ${slimktx2_source})
 target_include_directories(${PROJECT_NAME} PUBLIC "include")

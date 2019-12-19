@@ -66,10 +66,6 @@ add_include_folder("lib/include" "lib_includes")
 set(STB_INCLUDE_PATH "${CMAKE_CURRENT_LIST_DIR}/thirdparty/stb/" CACHE STRING "")
 set(lib_includes "${lib_includes};${STB_INCLUDE_PATH}")
 
-# SLIMKTX2
-set(SLIMKTX2_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/thirdparty/slimktx2/include/" CACHE STRING "")
-set(lib_includes "${lib_includes};${SLIMKTX2_INCLUDE_DIR}")
-
 #cli sources
 add_sources("cli/source/*.cpp" "cli_sources")
 add_include_folder("cli/include" "cli_includes")
@@ -84,6 +80,10 @@ target_link_libraries(lib PRIVATE "${Vulkan_LIBRARIES}")
 find_package(Glslang REQUIRED)
 target_link_libraries(lib PRIVATE glslang SPIRV)
 #source_group("include" FILES ${lib_includes})
+
+# SLIMKTX2
+add_subdirectory("thirdparty/slimktx2")
+target_link_libraries(lib PRIVATE slimktx2)
 
 #cli project
 add_executable(cli "${cli_sources}")
