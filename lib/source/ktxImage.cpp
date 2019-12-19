@@ -45,6 +45,22 @@ IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 	return IBLLib::KtxError;
 }
 
+void writeToFile(void* _pUserData, void* _file, const void* _pData, size_t _size)
+{
+	FILE* pFile = static_cast<FILE*>(_file);
+	fwrite(_pData, sizeof(uint8_t), _size, pFile);
+}
+
 IBLLib::KtxImage::~KtxImage()
 {
+}
+
+void* IBLLib::KtxImage::allocate(size_t _size)
+{
+	return malloc(_size);
+}
+
+void IBLLib::KtxImage::deallocate(void* _pData)
+{
+	free(_pData);
 }

@@ -29,6 +29,19 @@ namespace IBLLib
 	private:
 		Version m_version = Version::KTX2;
 		ux3d::slimktx2::SlimKTX2 m_slimKTX2;
+
+		ux3d::slimktx2::Callbacks m_callbacks =
+		{
+			nullptr,
+			nullptr,
+			nullptr,
+			nullptr,
+			&writeToFile
+		};
+
+		static void writeToFile(void* _pUserData, void* _file, const void* _pData, size_t _size);
+		static void* allocate(size_t _size);
+		static void deallocate(void* _pData);
 	};
 
 } // !IBLLIb
