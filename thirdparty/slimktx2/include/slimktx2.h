@@ -110,6 +110,8 @@ namespace ux3d
 			uint32_t getLayerCount() const;
 			const Header& getHeader() const;
 
+			uint64_t getTotalSize() const;
+
 			// computes total bytesize of all image data (no header, sections etc)
 			uint64_t getContainerSize() const;
 

@@ -5,7 +5,6 @@
 #include "FileHelper.h"
 #include "KtxImage.h"
 #include <vk_format_utils.h>
-#include "formatHelper.h"
 
 namespace IBLLib
 {
@@ -99,27 +98,27 @@ namespace IBLLib
 		Result result = Result::Success;
 	
 		KtxImage ktxImage;
-		result = ktxImage.loadKtx1(_inputPath);
+		result = ktxImage.loadKtx2(_inputPath);
 		if (result != Success)
 		{
 			return Result::KtxError;
 		}
 	
-		ktxTexture1* textureInformation = ktxImage.getTexture1();
+		ux3d::slimktx2::SlimKTX2* textureInformation = ktxImage.getTextureInfo();
 		if(textureInformation == nullptr)
 		{
 			printf("Error: failed to get texture information\n");
 			return KtxError;
 		}
 
-		const uint32_t dataByteSize = textureInformation->dataSize;
-		const uint32_t width = textureInformation->baseWidth;
-		const uint32_t height = textureInformation->baseHeight;
-		const uint32_t faces = textureInformation->isCubemap ? 6 : 1;
-		const VkFormat vkFormat = IBLLib::glToVulkanFormat(textureInformation->glInternalformat);
+		const uint32_t dataByteSize = textureInformation->getContainerSize();
+		const uint32_t width = textureInformation->getHeader().pixelWidth;
+		const uint32_t height = textureInformation->getHeader().pixelHeight;
+		const uint32_t faces = textureInformation->getHeader().faceCount;
+		const VkFormat vkFormat = static_cast<VkFormat>(textureInformation->getHeader().vkFormat);
 		const uint32_t formatSize = FormatElementSize(vkFormat);
 		
-		if(textureInformation->numLevels>1)
+		if(textureInformation->getHeader().levelCount > 1)
 		{
 			printf("Error: unexpected mip levels\n");
 			return InvalidArgument;
@@ -131,17 +130,9 @@ namespace IBLLib
 			return InvalidArgument;
 		}
 
-		if (textureInformation->isCubemap == false)
+		if (faces != 6u)
 		{
 			printf("Error: ktx file does not contain a cubemap\n");
-			return InvalidArgument;
-		}
-
-		const uint32_t expectedSize = width * height * faces * formatSize;
-
-		if (dataByteSize != expectedSize)
-		{
-			printf("Error: input size mismatch\n");
 			return InvalidArgument;
 		}
 
@@ -454,12 +445,8 @@ namespace IBLLib
 
 			if (_ktxCompressionQuality > 0)
 			{
-				res = ktxImage.compress(_ktxCompressionQuality);
-				if (res != Result::Success)
-				{
-					printf("Compression failed\n");
-					return res;
-				}
+				printf("Compression not implemented\n");
+				return Result::InvalidArgument;
 			}
 
 			res = ktxImage.save(_outputPath);

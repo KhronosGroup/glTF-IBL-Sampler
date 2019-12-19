@@ -18,6 +18,8 @@ namespace IBLLib
 
 		KtxImage();			
 		uint8_t* getData();
+		IBLLib::Result loadKtx2(const char* _pFilePath);
+		ux3d::slimktx2::SlimKTX2* getTextureInfo() { return &m_slimKTX2; }
 
 		KtxImage(Version _version, uint32_t _width, uint32_t _height, VkFormat _vkFormat,uint32_t _levels, bool _isCubeMap);
 		Result writeFace(const std::vector<unsigned char>& _inData, uint32_t _side, uint32_t _level);
