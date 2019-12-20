@@ -1,21 +1,19 @@
 #include "ktxImage.h"
 
-IBLLib::KtxImage::KtxImage() : 
-	m_slimKTX2({
-		nullptr,
-		&allocate,
-		&deallocate,
-		nullptr,
-		&writeToFile
-	})
+IBLLib::KtxImage::KtxImage() 
 {
+	ux3d::slimktx2::Callbacks callbacks{};
+
+	callbacks.allocate = allocate;
+	callbacks.free = deallocate;
+	callbacks.write = writeToFile;
+
+	m_slimKTX2.setCallbacks(callbacks);
 }
 
 uint8_t* IBLLib::KtxImage::getData()
 {
-	uint8_t* data = nullptr;
-	data = m_slimKTX2.getContainerPointer();
-	return static_cast<uint8_t*>(data);
+	return m_slimKTX2.getLevelContainerPointer();
 }
 
 IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
@@ -36,22 +34,17 @@ IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
 	return Result::Success;
 }
 
-IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap) :
-	m_slimKTX2({
-			nullptr,
-			&allocate,
-			&deallocate,
-			nullptr,
-			&writeToFile
-		}),
-	m_width(_width),
-	m_height(_height),
-	m_vkFormat(_vkFormat),
-	m_levels(_levels),
-	m_isCubeMap(_isCubeMap)
+IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap)
 {
-	m_slimKTX2.specifyFormat(static_cast<ux3d::slimktx2::Format>(m_vkFormat), m_width, m_height, m_levels, m_isCubeMap ? 6u : 1u);
-	m_slimKTX2.allocateContainer();
+	ux3d::slimktx2::Callbacks callbacks{};
+
+	callbacks.allocate = allocate;
+	callbacks.free = deallocate;
+	callbacks.write = writeToFile;
+
+	m_slimKTX2.setCallbacks(callbacks);
+	m_slimKTX2.specifyFormat(static_cast<ux3d::slimktx2::Format>(_vkFormat), _width, _height, _levels, _isCubeMap ? 6u : 1u);
+	m_slimKTX2.allocateLevelContainer();
 }
 
 IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _inData, uint32_t _side, uint32_t _level)
@@ -59,7 +52,7 @@ IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _in
 	// ToDo: check data size with createInfo
 	//(m_createInfo.baseHeight * m_createInfo.baseWidth)>> _level
 
-	if (m_slimKTX2.setImage(static_cast<const void*>(_inData.data()), _inData.size(), _level, _side, 0u) != ux3d::slimktx2::Result::Success)
+	if (m_slimKTX2.setImage(_inData.data(), _inData.size(), _level, _side, 0u) != ux3d::slimktx2::Result::Success)
 	{
 		return KtxError;
 	}
