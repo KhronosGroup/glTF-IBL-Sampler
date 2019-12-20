@@ -18,6 +18,27 @@ int main(int argc, char* argv[])
 	bool inputIsCubeMap = false;
 	bool enableDebugOutput = false;
 
+	if (argc == 1 ||
+		strcmp(argv[1], "-h") == 0 ||
+		strcmp(argv[1], "-help") == 0)
+	{
+		printf("glTF-IBL-Sampler usage:\n");
+
+		printf("-inputPath: path to panorama image (default) or cube map (if inputIsCubeMap flag ist set) \n");
+		printf("-specularOutput: output path for specular term of filtered cube map\n");
+		printf("-diffuseOutput: output path for diffuse term of filtered cube map\n");
+		printf("-sampleCount: number of samples used for filtering (default = 1024)\n");
+		printf("-mipLevelCount: number of mip levels of specular cube map\n");
+		printf("-cubeMapResolution: resolution of output cube map (default = 1024)\n");
+		printf("-ktxVersion: version 1 or version 2\n");
+		printf("-compressionQuality: compression level for KTX2 files in range 0 - 255, 0 -> no compression \n");
+		printf("-targetFormat: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT)  \n");
+		printf("-lodBias: level of detail bias applied to filtering (default = 1) \n");
+		printf("-inputIsCubeMap: if set, a cube map in ktx1 format is expected at input path \n");
+
+		return 0;
+	}
+
 	for (int i = 1; i+1 < argc; i += 2)
 	{
 		if (strcmp(argv[i], "-inputPath") == 0)
@@ -95,29 +116,7 @@ int main(int argc, char* argv[])
 			i -= 1;
 			printf("debug flag is set.\n");
 		}
-		else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-help") == 0)
-		{
-			printf("glTFIBLSampler\n");
-
-			printf("-inputPath: path to panorama image (default) or cube map (if inputIsCubeMap flag ist set) \n");
-			printf("-specularOutput: output path for specular term of filtered cube map\n");
-			printf("-diffuseOutput: output path for diffuse term of filtered cube map\n");
-			printf("-sampleCount: number of samples used for filtering (default = 1024)\n");
-			printf("-mipLevelCount: number of mip levels of specular cube map\n");
-			printf("-cubeMapResolution: resolution of output cube map (default = 1024)\n");
-			printf("-ktxVersion: version 1 or version 2\n");
-			printf("-compressionQuality: compression level for KTX2 files in range 0 - 255, 0 -> no compression \n");
-			printf("-targetFormat: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT)  \n");
-			printf("-lodBias: level of detail bias applied to filtering (default = 1 ) \n");
-			printf("-inputIsCubeMap: if set, a cube map in ktx1 format is expected at input path \n");
-
-			printf("\n");
-
-			return 0;
-		}
 	}
-
-
 
 	if (pathIn == nullptr) 
 	{
