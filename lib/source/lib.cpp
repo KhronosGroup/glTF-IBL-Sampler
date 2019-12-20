@@ -3,7 +3,7 @@
 #include "ShaderCompiler.h"
 #include "STBImage.h"
 #include "FileHelper.h"
-#include "KtxImage.h"
+#include "ktxImage.h"
 #include <vk_format_utils.h>
 
 namespace IBLLib
