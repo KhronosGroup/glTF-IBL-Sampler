@@ -13,8 +13,6 @@ int main(int argc, char* argv[])
 	unsigned int sampleCount = 1024u;
 	unsigned int mipLevelCount = 10u;
 	unsigned int cubeMapResolution = 1024u;
-	unsigned int ktxVersion = 1u;
-	unsigned int compressionQuality = 0u;
 	OutputFormat targetFormat = R16G16B16A16_SFLOAT;
 	float lodBias = 1.0f;
 	bool inputIsCubeMap = false;
@@ -54,13 +52,11 @@ int main(int argc, char* argv[])
 		}
 		else if (strcmp(argv[i], "-ktxVersion") == 0)
 		{
-			ktxVersion = strtoul(argv[i + 1], NULL, 0);
-			printf("ktxVersion set to %d \n", ktxVersion);
+			printf("KTX version can no longer be set, version 2 will be used\n");
 		}
 		else if (strcmp(argv[i], "-compressionQuality") == 0)
 		{
-			compressionQuality = strtoul(argv[i + 1], NULL, 0);
-			printf("compressionQuality set to %d \n", compressionQuality);
+			printf("Compression currently not supported, quality parameter will be ignored\n");
 		}
 		else if (strcmp(argv[i], "-targetFormat") == 0)
 		{
@@ -131,36 +127,16 @@ int main(int argc, char* argv[])
 
 	if (pathOutSpecular == nullptr)
 	{
-		if (ktxVersion == 1)
-		{
-			pathOutSpecular = "outputSpecular.ktx";
-		}
-		else
-		{
-			pathOutSpecular = "outputSpecular.ktx2";
-		}
+		pathOutSpecular = "outputSpecular.ktx2";
 	}
 
 	if (pathOutDiffuse == nullptr)
 	{
-		if (ktxVersion == 1)
-		{
-			pathOutDiffuse = "outputDiffuse.ktx";
-		}
-		else
-		{
-			pathOutDiffuse = "outputDiffuse.ktx2";
-		}
+		pathOutDiffuse = "outputDiffuse.ktx2";
 	}
 
-	if (ktxVersion == 1 && compressionQuality > 0)
-	{
-		printf("Compression not available for KTX1 files\n");
-		printf("Set compression to 0 or use KTX2 file version\n");
-		return -1;
-	}
-
-	Result res = sample(pathIn, pathOutSpecular, pathOutDiffuse, ktxVersion, compressionQuality, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, inputIsCubeMap, enableDebugOutput);
+	printf("\n");
+	Result res = sample(pathIn, pathOutSpecular, pathOutDiffuse, 2u, 0u, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, inputIsCubeMap, enableDebugOutput);
 
 	if (res != Result::Success)
 	{
