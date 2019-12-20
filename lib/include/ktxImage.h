@@ -29,7 +29,7 @@ namespace IBLLib
 		uint64_t getImageDataSize() const { return m_slimKTX2.getLevelContainerSize(m_slimKTX2.getHeader()); }
 
 	private:
-		ux3d::slimktx2::SlimKTX2 m_slimKTX2{{}};
+		ux3d::slimktx2::SlimKTX2 m_slimKTX2;
 
 		static void writeToFile(void* _pUserData, void* _file, const void* _pData, size_t _size);
 		static void* allocate(void* _pUserData, size_t _size);
