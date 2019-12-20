@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
 
 	if (pathIn == nullptr) 
 	{
-		printf("Input path not set. Set input path with -inputPath.");
+		printf("Input path not set. Set input path with -inputPath.\n");
 		return -1;
 	}
 
