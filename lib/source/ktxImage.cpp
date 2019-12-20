@@ -2,15 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-IBLLib::KtxImage::KtxImage() : 
-	m_slimKTX2({
-		nullptr,
-		&allocate,
-		&deallocate,
-		nullptr,
-		&writeToFile
-	})
+IBLLib::KtxImage::KtxImage()
 {
+	ux3d::slimktx2::Callbacks callbacks;
+	callbacks.allocate = &allocate;
+	callbacks.free = &deallocate;
+	callbacks.write = &writeToFile;
+
+	m_slimKTX2 = ux3d::slimktx2::SlimKTX2(callbacks);
 }
 
 uint8_t* IBLLib::KtxImage::getData()
@@ -39,19 +38,18 @@ IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
 }
 
 IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap) :
-	m_slimKTX2({
-			nullptr,
-			&allocate,
-			&deallocate,
-			nullptr,
-			&writeToFile
-		}),
 	m_width(_width),
 	m_height(_height),
 	m_vkFormat(_vkFormat),
 	m_levels(_levels),
 	m_isCubeMap(_isCubeMap)
 {
+	ux3d::slimktx2::Callbacks callbacks;
+	callbacks.allocate = &allocate;
+	callbacks.free = &deallocate;
+	callbacks.write = &writeToFile;
+
+	m_slimKTX2 = ux3d::slimktx2::SlimKTX2(callbacks);
 	m_slimKTX2.specifyFormat(static_cast<ux3d::slimktx2::Format>(m_vkFormat), m_width, m_height, m_levels, m_isCubeMap ? 6u : 1u);
 	m_slimKTX2.allocateContainer();
 }

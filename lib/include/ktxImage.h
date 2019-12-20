@@ -22,7 +22,7 @@ namespace IBLLib
 
 		~KtxImage();
 	private:
-		ux3d::slimktx2::SlimKTX2 m_slimKTX2;
+		ux3d::slimktx2::SlimKTX2 m_slimKTX2{{}};
 
 		uint32_t m_width = 0u;
 		uint32_t m_height = 0u;

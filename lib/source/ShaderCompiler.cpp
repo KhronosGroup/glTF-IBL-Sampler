@@ -141,7 +141,7 @@ bool IBLLib::ShaderCompiler::compile(const std::vector<char>& _glslBlob, const c
 	if (prog.link(EShMsgDefault) == false)
 	{
 		printf("%s\n", prog.getInfoLog());
-		return nullptr;
+		return false;
 	}
 
 	glslang::TIntermediate* pIntermediate = prog.getIntermediate((EShLanguage)_stage);
