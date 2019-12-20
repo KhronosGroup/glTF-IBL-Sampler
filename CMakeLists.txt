@@ -72,10 +72,6 @@ add_include_folder("lib/include" "lib_includes")
 set(STB_INCLUDE_PATH "${CMAKE_CURRENT_LIST_DIR}/thirdparty/stb/" CACHE STRING "")
 set(lib_includes "${lib_includes};${STB_INCLUDE_PATH}")
 
-#cli sources
-add_sources("cli/source/*.cpp" "cli_sources")
-add_include_folder("cli/include" "cli_includes")
-
 #lib project
 add_library(lib SHARED ${lib_sources} ${lib_includes})
 target_include_directories(lib PUBLIC "${lib_includes}")
@@ -92,8 +88,8 @@ add_subdirectory("thirdparty/slimktx2")
 target_link_libraries(lib PRIVATE slimktx2)
 
 #cli project
+add_sources("cli/source/*.cpp" "cli_sources")
 add_executable(cli "${cli_sources}")
-target_include_directories(cli PRIVATE "${cli_includes}")
 target_link_libraries(cli PUBLIC lib)
 
 message(STATUS "")
