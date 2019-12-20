@@ -105,21 +105,13 @@ namespace IBLLib
 			return Result::KtxError;
 		}
 	
-		ux3d::slimktx2::SlimKTX2* textureInformation = ktxImage.getTextureInfo();
-		if(textureInformation == nullptr)
-		{
-			printf("Error: failed to get texture information\n");
-			return KtxError;
-		}
-
-		const uint32_t dataByteSize = textureInformation->getContainerSize();
-		const uint32_t width = textureInformation->getHeader().pixelWidth;
-		const uint32_t height = textureInformation->getHeader().pixelHeight;
-		const uint32_t faces = textureInformation->getHeader().faceCount;
-		const VkFormat vkFormat = static_cast<VkFormat>(textureInformation->getHeader().vkFormat);
+		const uint32_t dataByteSize = ktxImage.getImageDataSize();
+		const uint32_t width = ktxImage.getWidth();
+		const uint32_t height = ktxImage.getHeight();
+		const VkFormat vkFormat = ktxImage.getFormat();
 		const uint32_t formatSize = FormatElementSize(vkFormat);
 		
-		if(textureInformation->getHeader().levelCount > 1)
+		if(ktxImage.getLevels() > 1)
 		{
 			printf("Error: unexpected mip levels\n");
 			return InvalidArgument;
@@ -131,7 +123,7 @@ namespace IBLLib
 			return InvalidArgument;
 		}
 
-		if (faces != 6u)
+		if (ktxImage.isCubeMap() == false)
 		{
 			printf("Error: ktx file does not contain a cubemap\n");
 			return InvalidArgument;
@@ -186,7 +178,7 @@ namespace IBLLib
 		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		subresourceRange.baseMipLevel = 0;
 		subresourceRange.levelCount = 1;
-		subresourceRange.layerCount = faces;
+		subresourceRange.layerCount = 6u;
 
 		_vulkan.imageBarrier(uploadCmds, _outImage,
 			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -432,8 +424,7 @@ namespace IBLLib
 						return Result::VulkanError;
 					}
 
-					uint32_t ktxLevelIndex = mipLevels - 1 - level;
-					res = ktxImage.writeFace(imageData, face, ktxLevelIndex);
+					res = ktxImage.writeFace(imageData, face, level);
 
 					if (res != Result::Success)
 					{
