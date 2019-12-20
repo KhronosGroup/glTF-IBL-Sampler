@@ -1,4 +1,6 @@
 #include "ktxImage.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 IBLLib::KtxImage::KtxImage() : 
 	m_slimKTX2({

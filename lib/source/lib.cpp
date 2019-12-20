@@ -5,6 +5,7 @@
 #include "FileHelper.h"
 #include "ktxImage.h"
 #include <vk_format_utils.h>
+#include <stdio.h>
 
 namespace IBLLib
 {
