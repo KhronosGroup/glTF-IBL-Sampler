@@ -49,7 +49,7 @@ IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat
 	callbacks.tell = tell;
 	
 	m_slimKTX2.setCallbacks(callbacks);
-	m_slimKTX2.specifyFormat(static_cast<ux3d::slimktx2::Format>(_vkFormat), _width, _height, _levels, _isCubeMap ? 6u : 1u);
+	m_slimKTX2.specifyFormat(static_cast<ux3d::slimktx2::Format>(_vkFormat), _width, _height, _levels, _isCubeMap ? 6u : 1u, 0u, 0u);
 	m_slimKTX2.allocateContainer();
 }
 
