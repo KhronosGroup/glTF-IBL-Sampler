@@ -61,7 +61,7 @@ IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _in
 
 IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 {	
-	FILE* pFile = fopen(_pathOut, "w");
+	FILE* pFile = fopen(_pathOut, "wb");
 
 	if (pFile == NULL)
 	{
