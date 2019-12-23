@@ -26,7 +26,7 @@ namespace IBLLib
 		uint32_t getLevels() const { return m_slimKTX2.getHeader().levelCount; }
 		bool isCubeMap() const { return m_slimKTX2.getHeader().faceCount == 6u; }
 		VkFormat getFormat() const { return static_cast<VkFormat>(m_slimKTX2.getHeader().vkFormat); }
-		uint64_t getImageDataSize() const { return m_slimKTX2.getLevelContainerSize(m_slimKTX2.getHeader()); }
+		uint64_t getImageDataSize() const { return m_slimKTX2.getContainerSize(); }
 
 	private:
 		ux3d::slimktx2::SlimKTX2 m_slimKTX2;

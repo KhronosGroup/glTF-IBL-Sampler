@@ -293,7 +293,7 @@ namespace IBLLib
 		return Result::Success;
 	}
 
-	Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const char* _outputPath, unsigned int _ktxCompressionQuality, const VkImageLayout inputImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const char* _outputPath, const VkImageLayout inputImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 	{
 		const VkImageCreateInfo* pInfo = _vulkan.getCreateInfo(_srcImage);
 		if (pInfo == nullptr)
@@ -434,12 +434,6 @@ namespace IBLLib
 				}
 
 				currentSideLength = currentSideLength >> 1;
-			}
-
-			if (_ktxCompressionQuality > 0)
-			{
-				printf("Compression not implemented\n");
-				return Result::InvalidArgument;
 			}
 
 			res = ktxImage.save(_outputPath);
@@ -658,7 +652,7 @@ namespace IBLLib
 } // !IBLLib
 
 
-IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpecular, const char* _outputPathDiffuse, unsigned int _ktxVersion, unsigned int _ktxCompressionQuality, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat, float _lodBias, bool _inputIsCubeMap, bool _debugOutput)
+IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpecular, const char* _outputPathDiffuse, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat, float _lodBias, bool _inputIsCubeMap, bool _debugOutput)
 {
 	const VkFormat cubeMapFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 	const uint32_t cubeMapSideLength = _cubemapResolution;
@@ -1062,13 +1056,13 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		return Result::VulkanError;
 	}
 
-	if (downloadCubemap(vulkan, convertedSpecularCubeMap, _outputPathSpecular, _ktxCompressionQuality, currentSpecularCubeMapImageLayout) != VK_SUCCESS)
+	if (downloadCubemap(vulkan, convertedSpecularCubeMap, _outputPathSpecular, currentSpecularCubeMapImageLayout) != VK_SUCCESS)
 	{
 		printf("Failed to download Image \n");
 		return Result::VulkanError;
 	}
 
-	if (downloadCubemap(vulkan, convertedDiffuseCubeMap, _outputPathDiffuse, _ktxCompressionQuality, currentDiffuseCubeMapImageLayout) != VK_SUCCESS)
+	if (downloadCubemap(vulkan, convertedDiffuseCubeMap, _outputPathDiffuse, currentDiffuseCubeMapImageLayout) != VK_SUCCESS)
 	{
 		printf("Failed to download Image \n");
 		return Result::VulkanError;

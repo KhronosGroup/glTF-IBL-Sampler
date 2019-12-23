@@ -13,7 +13,7 @@ IBLLib::KtxImage::KtxImage()
 
 uint8_t* IBLLib::KtxImage::getData()
 {
-	return m_slimKTX2.getLevelContainerPointer();
+	return m_slimKTX2.getContainerPointer();
 }
 
 IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
@@ -44,15 +44,13 @@ IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat
 
 	m_slimKTX2.setCallbacks(callbacks);
 	m_slimKTX2.specifyFormat(static_cast<ux3d::slimktx2::Format>(_vkFormat), _width, _height, _levels, _isCubeMap ? 6u : 1u);
-	m_slimKTX2.allocateLevelContainer();
+	m_slimKTX2.allocateContainer();
 }
 
 IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _inData, uint32_t _side, uint32_t _level)
 {
-	// ToDo: check data size with createInfo
-	//(m_createInfo.baseHeight * m_createInfo.baseWidth)>> _level
-
-	if (m_slimKTX2.setImage(_inData.data(), _inData.size(), _level, _side, 0u) != ux3d::slimktx2::Result::Success)
+	const uint32_t ktxLevel = getLevels() - _level - 1u;
+	if (m_slimKTX2.setImage(_inData.data(), _inData.size(), ktxLevel, _side, 0u) != ux3d::slimktx2::Result::Success)
 	{
 		return KtxError;
 	}
