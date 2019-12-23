@@ -34,6 +34,8 @@ namespace IBLLib
 		static size_t readFromFile(void* _pUserData, void* _file, void* _pData, size_t _size);
 		static size_t tell(void* _pUserData, void* _file);
 
+		static void log(void* _pUserData, const char* _format, va_list _args);
+
 		static void writeToFile(void* _pUserData, void* _file, const void* _pData, size_t _size);
 		static void* allocate(void* _pUserData, size_t _size);
 		static void deallocate(void* _pUserData, void* _pData);
