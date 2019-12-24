@@ -15,7 +15,7 @@ IBLLib::KtxImage::KtxImage()
 	m_slimKTX2.setCallbacks(callbacks);
 }
 
-uint8_t* IBLLib::KtxImage::getData()
+uint8_t* IBLLib::KtxImage::getData() const
 {
 	return m_slimKTX2.getContainerPointer();
 }
@@ -56,7 +56,7 @@ IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat
 	m_slimKTX2.allocateContainer();
 }
 
-IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _inData, uint32_t _side, uint32_t _level)
+IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, uint32_t _level)
 {
 	if (m_slimKTX2.setImage(_inData.data(), _inData.size(), _level, _side, 0u) != ux3d::slimktx2::Result::Success)
 	{

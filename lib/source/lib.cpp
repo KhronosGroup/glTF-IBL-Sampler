@@ -104,7 +104,7 @@ namespace IBLLib
 			return Result::KtxError;
 		}
 	
-		const uint32_t dataByteSize = ktxImage.getImageDataSize();
+		const uint64_t dataByteSize = ktxImage.getImageDataSize();
 		const uint32_t width = ktxImage.getWidth();
 		const uint32_t height = ktxImage.getHeight();
 		const VkFormat vkFormat = ktxImage.getFormat();
@@ -405,7 +405,7 @@ namespace IBLLib
 		{
 			KtxImage ktxImage(cubeMapSideLength, cubeMapSideLength, cubeMapFormat, mipLevels, true);
 
-			std::vector<unsigned char> imageData;
+			std::vector<uint8_t> imageData;
 
 			uint32_t currentSideLength = cubeMapSideLength;
 

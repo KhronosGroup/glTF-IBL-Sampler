@@ -12,13 +12,13 @@ namespace IBLLib
 	public:
 
 		KtxImage();			
-		KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat,uint32_t _levels, bool _isCubeMap);
+		KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap);
 		~KtxImage();
 
-		uint8_t* getData();
+		uint8_t* getData() const;
 		IBLLib::Result loadKtx2(const char* _pFilePath);
 
-		Result writeFace(const std::vector<unsigned char>& _inData, uint32_t _side, uint32_t _level);
+		Result writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, uint32_t _level);
 		Result save(const char* _pathOut);
 
 		uint32_t getWidth() const { return m_slimKTX2.getHeader().pixelWidth; }
