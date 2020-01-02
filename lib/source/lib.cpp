@@ -662,9 +662,9 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 	uint32_t maxMipLevels = 0u;
 	for (uint32_t m = cubeMapSideLength; m > 0; m = m >> 1, ++maxMipLevels) {}
 
-	if (_cubemapResolution >> _mipmapCount < 1)
+	if ((_cubemapResolution >> (outputMipLevels - 1)) < 1)
 	{
-		printf("Error: CubemapResolution incompatible with MipmapCount ");
+		printf("Error: CubemapResolution incompatible with MipmapCount\n");
 		return Result::InvalidArgument;
 	}
 
@@ -965,7 +965,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 			subresourceRange);
 
 		PushConstant values{};
-		values.roughness = currentMipLevel / static_cast<float>(outputMipLevels);
+		values.roughness = static_cast<float>(currentMipLevel) / static_cast<float>(outputMipLevels - 1);
 		values.sampleCount = _sampleCount;
 		values.mipLevel = currentMipLevel;
 		values.width = cubeMapSideLength;
