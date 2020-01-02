@@ -21,7 +21,7 @@ The individual transformations can be executed separately in the library, enabli
 
 * Environment HDR image &rightarrow; Cube Map  
 * Cube Map &rightarrow; Filtered Cube Map  
-* Filtered Cube Map &rightarrow; KTX2 Compressed Output File  
+* Filtered Cube Map &rightarrow; KTX2 Output File  
 
 This separation of shader passes ensures both, flexibility and extensibility.
 The pre-filtering will use the algorithms noted in the [glTF Sample Environments](https://github.com/ux3d/glTF-Sample-Environments) repository.
@@ -37,14 +37,7 @@ Third Party Requirements:
 * Vulkan SDK
 * Glslang (included in the Vulkan SDK)
 * [STB](https://github.com/nothings/stb) image library (git submodule)
-* [KTX2](https://github.com/KhronosGroup/KTX-Software/tree/ktx2) (git submodule)
-
-Currently, libktx does not come with a CMake list and additional steps need to be taken (MSVC example):
-
-* [Build libktx](https://github.com/KhronosGroup/KTX-Software/blob/ktx2/BUILDING.md) using the project files for your toolchain found in the ```thirdparty\ktx2\build\``` folder. E.g. thirdparty\ktx2\build\msvs\x64\vs2017
-* Set ```KTX2_LIBRARY``` CMake variable to your .lib / .a file. E.g. E:\Projects\glTFIBLSampler\thirdparty\ktx2\build\msvs\x64\vs2017\Debug\libktx.gl.lib
-* Generate the glTF-IBL-Sampler project using CMake
-* (Windows) Copy ```libktx.gl.dll/dynlib``` and ```glew32.dll``` from the same folder to your executable folder (output containing cli.exe).
+* [SlimKTX2](https://github.com/ux3d/slimktx2/) (git submodule)
 
 CMake option ```IBLSAMPLER_EXPORT_SHADERS``` can be used to automatically copy the shader folder to the executable folder when generating the project files. By default, shaders will be loaded from their source location in lib/shaders.
 
@@ -60,8 +53,6 @@ The CLI takes an environment HDR image as input. The filtered specular and diffu
 * ```-sampleCount```: number of samples used for filtering (default = 1024)
 * ```-mipLevelCount```: number of mip levels of specular cube map
 * ```-cubeMapResolution```: resolution of output cube map (default = 1024)
-* ```-ktxVersion```: version 1 or version 2
-* ```-compressionQuality```: compression level for KTX2 files in range 0 - 255, 0 -> no compression
 * ```-targetFormat```: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT)
 * ```-lodBias```: level of detail bias applied to filtering (default = 1 )
 * ```-inputIsCubeMap```: if set, a cube map in ktx1 format is expected at input path 
@@ -69,5 +60,5 @@ The CLI takes an environment HDR image as input. The filtered specular and diffu
 Example
 
 ```
-.\cli.exe -inputPath ..\cubemap_in.hdr -inputIsCubeMap -specularOutput ..\..\specular_out.ktx2 -diffuseOutput ..\diffuse_out.ktx2 -sampleCount 1024 -mipLevelCount 5 -cubeMapResolution 1024 -ktxVersion 2 -compressionQuality 0 -targetFormat R16G16B16A16_SFLOAT
+.\cli.exe -inputPath ..\cubemap_in.hdr -inputIsCubeMap -specularOutput ..\..\specular_out.ktx2 -diffuseOutput ..\diffuse_out.ktx2 -sampleCount 1024 -mipLevelCount 5 -cubeMapResolution 1024 -targetFormat R16G16B16A16_SFLOAT
 ```

@@ -1,6 +1,7 @@
 #include "ktxImage.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 IBLLib::KtxImage::KtxImage()
 {
@@ -9,18 +10,21 @@ IBLLib::KtxImage::KtxImage()
 	callbacks.allocate = allocate;
 	callbacks.free = deallocate;
 	callbacks.write = writeToFile;
+	callbacks.read = readFromFile;
+	callbacks.tell = tell;
+	callbacks.log = log;
 
 	m_slimKTX2.setCallbacks(callbacks);
 }
 
-uint8_t* IBLLib::KtxImage::getData()
+uint8_t* IBLLib::KtxImage::getData() const
 {
-	return m_slimKTX2.getLevelContainerPointer();
+	return m_slimKTX2.getContainerPointer();
 }
 
 IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
 {
-	FILE* pFile = fopen(_pFilePath, "r");
+	FILE* pFile = fopen(_pFilePath, "rb");
 
 	if (pFile == NULL)
 	{
@@ -30,9 +34,11 @@ IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
 
 	if (m_slimKTX2.parse(pFile) != ux3d::slimktx2::Result::Success)
 	{
+		fclose(pFile);
 		return Result::KtxError;
 	}
 
+	fclose(pFile);
 	return Result::Success;
 }
 
@@ -43,17 +49,17 @@ IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat
 	callbacks.allocate = allocate;
 	callbacks.free = deallocate;
 	callbacks.write = writeToFile;
-
+	callbacks.read = readFromFile;
+	callbacks.tell = tell;
+	callbacks.log = log;
+	
 	m_slimKTX2.setCallbacks(callbacks);
-	m_slimKTX2.specifyFormat(static_cast<ux3d::slimktx2::Format>(_vkFormat), _width, _height, _levels, _isCubeMap ? 6u : 1u);
-	m_slimKTX2.allocateLevelContainer();
+	m_slimKTX2.specifyFormat(static_cast<ux3d::slimktx2::Format>(_vkFormat), _width, _height, _levels, _isCubeMap ? 6u : 1u, 0u, 0u);
+	m_slimKTX2.allocateContainer();
 }
 
-IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _inData, uint32_t _side, uint32_t _level)
+IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, uint32_t _level)
 {
-	// ToDo: check data size with createInfo
-	//(m_createInfo.baseHeight * m_createInfo.baseWidth)>> _level
-
 	if (m_slimKTX2.setImage(_inData.data(), _inData.size(), _level, _side, 0u) != ux3d::slimktx2::Result::Success)
 	{
 		return KtxError;
@@ -62,10 +68,9 @@ IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _in
 	return Success;
 }
 
-
 IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 {	
-	FILE* pFile = fopen(_pathOut, "w");
+	FILE* pFile = fopen(_pathOut, "wb");
 
 	if (pFile == NULL)
 	{
@@ -82,6 +87,25 @@ IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 
 	fclose(pFile);
 	return Success;
+}
+
+size_t IBLLib::KtxImage::readFromFile(void* _pUserData, void* _file, void* _pData, size_t _size)
+{
+	FILE* pFile = static_cast<FILE*>(_file);
+	return fread(_pData, sizeof(uint8_t), _size, pFile);
+}
+
+size_t IBLLib::KtxImage::tell(void* _pUserData, void* _file)
+{
+	FILE* pFile = static_cast<FILE*>(_file);
+	return ftell(pFile);
+}
+
+void IBLLib::KtxImage::log(void* _pUserData, const char* _format, va_list _args)
+{
+	char buffer[512];
+	vsnprintf(buffer, sizeof(buffer), _format, _args);
+	printf(buffer);
 }
 
 void IBLLib::KtxImage::writeToFile(void* _pUserData, void* _file, const void* _pData, size_t _size)

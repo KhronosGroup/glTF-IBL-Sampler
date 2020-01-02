@@ -69,14 +69,6 @@ int main(int argc, char* argv[])
 			cubeMapResolution = strtoul(argv[i + 1], NULL, 0);
 			printf("cubeMapResolution set to %d \n", cubeMapResolution);
 		}
-		else if (strcmp(argv[i], "-ktxVersion") == 0)
-		{
-			printf("KTX version can no longer be set, version 2 will be used\n");
-		}
-		else if (strcmp(argv[i], "-compressionQuality") == 0)
-		{
-			printf("Compression currently not supported, quality parameter will be ignored\n");
-		}
 		else if (strcmp(argv[i], "-targetFormat") == 0)
 		{
 			const char* targetFormatString = argv[i + 1];
@@ -116,6 +108,11 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	if (argc == 2)
+	{
+		pathIn = argv[1];
+	}
+
 	if (pathIn == nullptr) 
 	{
 		printf("Input path not set. Set input path with -inputPath.\n");
@@ -132,8 +129,7 @@ int main(int argc, char* argv[])
 		pathOutDiffuse = "outputDiffuse.ktx2";
 	}
 
-	printf("\n");
-	Result res = sample(pathIn, pathOutSpecular, pathOutDiffuse, 2u, 0u, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, inputIsCubeMap, enableDebugOutput);
+	Result res = sample(pathIn, pathOutSpecular, pathOutDiffuse, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, inputIsCubeMap, enableDebugOutput);
 
 	if (res != Result::Success)
 	{
