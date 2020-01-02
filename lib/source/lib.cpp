@@ -823,6 +823,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		uint32_t mipLevel = 1u;
 		uint32_t width = 1024u;
 		float lodBias = 0.f;
+		Distribution distribution = Lambertian;
 	};
 
 	std::vector<VkPushConstantRange> ranges(1u);
@@ -970,6 +971,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		values.mipLevel = currentMipLevel;
 		values.width = cubeMapSideLength;
 		values.lodBias = _lodBias;
+		values.distribution = GGX;
 
 		vkCmdPushConstants(cubeMapCmd, filterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
 	
@@ -1007,6 +1009,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		values.mipLevel = 0;
 		values.width = cubeMapSideLength;
 		values.lodBias = _lodBias;
+		values.distribution = Lambertian;
 
 		vkCmdPushConstants(cubeMapCmd, filterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
 

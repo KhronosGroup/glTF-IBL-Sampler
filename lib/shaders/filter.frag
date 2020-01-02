@@ -7,12 +7,18 @@
 layout(set = 0, binding = 0) uniform sampler2D uPanorama;
 layout(set = 0, binding = 1) uniform samplerCube uCubeMap;
 
+// enum
+const uint cLambertian = 0;
+const uint cGGX = 1;
+const uint cCharlie = 2;
+
 layout(push_constant) uniform FilterParameters {
   float roughness;
   uint sampleCount;
   uint currentMipLevel;
   uint width;
   float lodBias;
+  uint distribution; // enum
 } pFilterParameters;
 
 layout (location = 0) in vec2 inUV;
@@ -76,9 +82,9 @@ float saturate(float v)
 	return clamp(v, 0.0f, 1.0f);
 }
 
-vec2 Hammersley(uint i, uint n)
+float Hammersley(uint i)
 {
-    return vec2(float(i) / float(n), bitfieldReverse(i) * 2.3283064365386963e-10);
+    return bitfieldReverse(i) * 2.3283064365386963e-10;
 }
 
 vec3 getImportanceSampleDirection(vec3 normal, float sinTheta, float cosTheta, float phi)
@@ -104,26 +110,6 @@ vec3 getImportanceSampleDirection(vec3 normal, float sinTheta, float cosTheta, f
 	return normalize(tangent * H.x + bitangent * H.y + normal * H.z);
 }
 
-vec3 lambertWeightedVector(vec2 e, vec3 normal)
-{
-    float phi = 2.0 * UX3D_MATH_PI * e.y;
-    float cosTheta = 1.0 - e.x;
-    float sinTheta = sqrt(1.0 - cosTheta*cosTheta);
-    
-    return getImportanceSampleDirection(normal, sinTheta, cosTheta, phi);
-}
-
-vec3 ggxWeightedVector(vec2 e, vec3 normal, float roughness)
-{
-    float alpha = roughness * roughness;
-
-    float phi = 2.0 * UX3D_MATH_PI * e.y;
-    float cosTheta = sqrt((1.0 - e.x) / (1.0 + (alpha*alpha - 1.0) * e.x));
-    float sinTheta = sqrt(1.0 - cosTheta*cosTheta);
-    
-    return getImportanceSampleDirection(normal, sinTheta, cosTheta, phi);
-}
-
 float ndfTrowbridgeReitzGGX(float NdotH, float roughness)
 {
     float alpha = roughness * roughness;
@@ -135,17 +121,65 @@ float ndfTrowbridgeReitzGGX(float NdotH, float roughness)
     return alpha2 / (UX3D_MATH_PI * divisor * divisor); 
 }
 
-vec3 filterSpecular(float roughness, vec3 N)
+vec3 getSampleVector(uint sampleIndex, vec3 N)
 {
-	vec3 specular = vec3(0.f);
-	const uint NumSamples = pFilterParameters.sampleCount;
-	const float solidAngleTexel = 4.0 * UX3D_MATH_PI / (6.0 * pFilterParameters.width * pFilterParameters.width);
+	float X = float(sampleIndex) / float(pFilterParameters.sampleCount);
+	float Y = Hammersley(sampleIndex);
 	
-	float weight = 0.f;
+	float phi = 2.0 * UX3D_MATH_PI * X;
+    float cosTheta = 0.f;
+
+	if(pFilterParameters.distribution == cLambertian)
+	{
+		cosTheta = 1.0 - Y;
+	}
+	else if(pFilterParameters.distribution == cGGX)
+	{
+		float alpha = pFilterParameters.roughness * pFilterParameters.roughness;
+		cosTheta = sqrt((1.0 - Y) / (1.0 + (alpha*alpha - 1.0) * Y));		
+	}
+	else if(pFilterParameters.distribution == cCharlie)
+	{
+		
+	}
+	
+	float sinTheta = sqrt(1.0 - cosTheta*cosTheta);
+	
+	return getImportanceSampleDirection(N, sinTheta, cosTheta, phi);
+}
+
+float PDF(vec3 V, vec3 H, vec3 N, vec3 L)
+{
+	if(pFilterParameters.distribution == cLambertian)
+	{
+		float NdotL = dot(N, L);
+		return max(NdotL * UX3D_MATH_INV_PI, 0.0);
+	}
+	else if(pFilterParameters.distribution == cGGX)
+	{
+		float VdotH = dot(V, H); // if V = N then VdotH = NdotH and D * NdotH / (4.0 * VdotH) = D / 4.0 (which seems weird)
+		float NdotH = dot(N, H);
+	
+		float D = ndfTrowbridgeReitzGGX(NdotH, pFilterParameters.roughness);
+		return max(D * NdotH / (4.0 * VdotH), 0.0);
+	}
+	else if(pFilterParameters.distribution == cCharlie)
+	{
+		
+	}
+	
+	return 0.f;
+}
+
+vec3 filterColor(vec3 N)
+{
+	vec4 color = vec4(0.f);
+	const uint NumSamples = pFilterParameters.sampleCount;
+	const float solidAngleTexel = 4.0 * UX3D_MATH_PI / (6.0 * pFilterParameters.width * pFilterParameters.width);	
 	
 	for(uint i = 0; i < NumSamples; ++i)
 	{
-		vec3 H = ggxWeightedVector(Hammersley(i, NumSamples), N, roughness);
+		vec3 H = getSampleVector(i, N);
 
 		// Note: reflect takes incident vector.
 		// Note: N = V
@@ -159,71 +193,36 @@ vec3 filterSpecular(float roughness, vec3 N)
 		{
 			float lod = 0.0;
 		
-			if (roughness > 0.0)
-			{    
-				float VdotH = dot(V, H);
-				float NdotH = dot(N, H);
-			
-				float D = ndfTrowbridgeReitzGGX(NdotH, roughness);
-				float pdf = max(D * NdotH / (4.0 * VdotH), 0.0);
+			if (pFilterParameters.roughness > 0.0 || pFilterParameters.distribution == cLambertian)
+			{		
+				// Mipmap Filtered Samples 
+				// see https://github.com/derkreature/IBLBaker
+				// see https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch20.html
+				float pdf = PDF(V, H, N, L);
 				
 				float solidAngleSample = 1.0 / (NumSamples * pdf);
 				
 				lod = 0.5 * log2(solidAngleSample / solidAngleTexel);
 				lod += pFilterParameters.lodBias;
 			}
-			
-			specular += textureLod(uCubeMap, L, lod).rgb * NdotL;
 						
-			weight += NdotL;
+			if(pFilterParameters.distribution == cGGX)
+			{
+				color += vec4(textureLod(uCubeMap, L, lod).rgb * NdotL, NdotL);				
+			}
+			else if(pFilterParameters.distribution == cLambertian)
+			{				
+				color += vec4(texture(uCubeMap, H, lod).rgb, 1.0);
+			}			
 		}
 	}
 
-	if(weight == 0.f)
+	if(color.w == 0.f)
 	{
-		weight = 1.f;		
+		return color.rgb;
 	}
 
-	return specular / weight;
-}
-
-vec3 filterDiffuse(vec3 N)
-{
-	vec3 diffuse = vec3(0.f);
-	uint weight = 0;
-	
-	const uint NumSamples = pFilterParameters.sampleCount;
-	const float solidAngleTexel = 4.0 * UX3D_MATH_PI / (6.0 * pFilterParameters.width * pFilterParameters.width);
-	
-	for(uint i = 0; i < NumSamples; i++ )
-	{		
-		vec3 H = lambertWeightedVector(Hammersley(i, NumSamples), N);
-    
-		// Note: reflect takes incident vector.
-		// Note: N = V
-		vec3 V = N;
-		vec3 L = normalize(reflect(-V, H));
-		float NdotL = dot(N, L);
-		
-		if (NdotL > 0.0)
-		{   
-			// Mipmap Filtered Samples 
-			// see https://github.com/derkreature/IBLBaker
-			// see https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch20.html
-			
-			float pdf = max(NdotL * UX3D_MATH_INV_PI, 0.0);				
-			
-			float solidAngleSample = 1.0 / (float(NumSamples) * pdf);
-				
-			float lod = 0.5 * log2(solidAngleSample / solidAngleTexel);
-			lod += pFilterParameters.lodBias;
-			diffuse += texture(uCubeMap, H, lod).rgb;
-			++weight;
-		}		
-	}
-	
-	weight = max(weight, 1u);
-	return diffuse / float(weight);
+	return color.rgb / color.w;
 }
 
 // entry point
@@ -255,7 +254,7 @@ void filterCubeMapSpecular()
 		vec3 direction = normalize(scan);	
 		direction.y = -direction.y;
 
-		writeFace(face, filterSpecular(pFilterParameters.roughness, direction));
+		writeFace(face, filterColor(direction));
 		
 		//Debug output:
 		//writeFace(face,  texture(uCubeMap, direction).rgb);
@@ -273,6 +272,6 @@ void filterCubeMapDiffuse()
 		vec3 direction = normalize(scan);	
 		direction.y = -direction.y;
 
-		writeFace(face, filterDiffuse(direction));
+		writeFace(face, filterColor(direction));
 	}
 }
