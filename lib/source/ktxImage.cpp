@@ -1,159 +1,129 @@
 #include "ktxImage.h"
-#include "formatHelper.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
 
-IBLLib::KtxImage::KtxImage(Version _version, uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap) :
-	m_version(_version)
+IBLLib::KtxImage::KtxImage()
 {
+	ux3d::slimktx2::Callbacks callbacks{};
 
-	m_createInfo.baseWidth = _width;
-	m_createInfo.baseHeight = _height;
-	m_createInfo.baseDepth = 1u;
-	m_createInfo.numDimensions = 2u;
-	
-	m_createInfo.numLevels = _levels;
-	m_createInfo.numLayers = 1u;
-	m_createInfo.numFaces = _isCubeMap ? 6u : 1u;
-	m_createInfo.isArray = KTX_FALSE;
-	m_createInfo.generateMipmaps = KTX_FALSE;
+	callbacks.allocate = allocate;
+	callbacks.free = deallocate;
+	callbacks.write = writeToFile;
+	callbacks.read = readFromFile;
+	callbacks.tell = tell;
+	callbacks.log = log;
 
-	m_createInfo.vkFormat = _vkFormat;
-	m_createInfo.glInternalformat = IBLLib::vulkanToGlFormat(_vkFormat);
-
-	ktxTexture1* pTexture1 = nullptr;
-	ktxTexture2* pTexture2 = nullptr;
-
-	KTX_error_code result = KTX_SUCCESS;
-	
-	switch (_version)
-	{
-	case Version::KTX1:
-		result = ktxTexture1_Create(&m_createInfo, KTX_TEXTURE_CREATE_ALLOC_STORAGE, &pTexture1);
-		m_pTexture = ktxTexture(pTexture1);
-		break;
-	case Version::KTX2:
-		result = ktxTexture2_Create(&m_createInfo, KTX_TEXTURE_CREATE_ALLOC_STORAGE, &pTexture2);
-		if (result == KTX_SUCCESS)
-		{ 
-			const char name[] = "glTFIBLSampler";
-			ktxHashList_AddKVPair(&pTexture2->kvDataHead, KTX_WRITER_KEY, sizeof(name), name);
-			m_pTexture = ktxTexture(pTexture2);
-		}
-		break;
-	}
-
-	if (result != KTX_SUCCESS)
-	{
-		ktxTexture_Destroy(m_pTexture);
-		m_pTexture = nullptr;
-		printf("ktx: %s\n", ktxErrorString(result));
-	}
+	m_slimKTX2.setCallbacks(callbacks);
 }
 
-IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<unsigned char>& _inData, uint32_t _side, uint32_t _level)
+uint8_t* IBLLib::KtxImage::getData() const
 {
-	// ToDo: check data size with createInfo
-	//(m_createInfo.baseHeight * m_createInfo.baseWidth)>> _level
+	return m_slimKTX2.getContainerPointer();
+}
 
-	if (m_pTexture == nullptr || _inData.empty())
+IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
+{
+	FILE* pFile = fopen(_pFilePath, "rb");
+
+	if (pFile == NULL)
 	{
-		return InvalidArgument;
+		printf("Could not open file '%s'\n", _pFilePath);
+		return Result::FileNotFound;
 	}
 
-	const uint32_t  layer = 0u;// we have no array, just cubemap sides
-
-	KTX_error_code result = ktxTexture_SetImageFromMemory(m_pTexture, _level, layer, _side, _inData.data(), _inData.size() );
-
-	if (result != KTX_SUCCESS)
+	if (m_slimKTX2.parse(pFile) != ux3d::slimktx2::Result::Success)
 	{
-		printf("ktx: %s\n", ktxErrorString(result));
+		fclose(pFile);
+		return Result::KtxError;
+	}
+
+	fclose(pFile);
+	return Result::Success;
+}
+
+IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap)
+{
+	ux3d::slimktx2::Callbacks callbacks{};
+
+	callbacks.allocate = allocate;
+	callbacks.free = deallocate;
+	callbacks.write = writeToFile;
+	callbacks.read = readFromFile;
+	callbacks.tell = tell;
+	callbacks.log = log;
+	
+	m_slimKTX2.setCallbacks(callbacks);
+	m_slimKTX2.specifyFormat(static_cast<ux3d::slimktx2::Format>(_vkFormat), _width, _height, _levels, _isCubeMap ? 6u : 1u, 0u, 0u);
+	m_slimKTX2.allocateContainer();
+}
+
+IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, uint32_t _level)
+{
+	if (m_slimKTX2.setImage(_inData.data(), _inData.size(), _level, _side, 0u) != ux3d::slimktx2::Result::Success)
+	{
 		return KtxError;
 	}
 
 	return Success;
-}
-
-IBLLib::Result IBLLib::KtxImage::compress(ktxBasisParams _params)
-{
-	if (m_pTexture == nullptr)
-	{
-		return InvalidArgument;
-	}
-
-	if (m_version != Version::KTX2)
-	{
-		return KtxError;
-	}
-
-	printf("Compressing ...\n");
-
-	KTX_error_code result = ktxTexture2_CompressBasisEx(reinterpret_cast<ktxTexture2*>(m_pTexture), &_params);
-
-	if (result != KTX_SUCCESS)
-	{
-		ktxTexture_Destroy(ktxTexture(m_pTexture));
-		printf("Compression failed \n");
-		printf("ktx: %s\n", ktxErrorString(result));
-		m_pTexture = nullptr;
-		return KtxError;
-	}
-	
-	return Success;
-}
-
-IBLLib::Result IBLLib::KtxImage::compress(unsigned int _qualityLevel)
-{
-	ktxBasisParams ktxParams{};
-	ktxParams.structSize = sizeof(ktxBasisParams);
-	ktxParams.threadCount = 1;
-	ktxParams.compressionLevel = 1;	//encoding speed vs. quality - Range is 0 - 5, default is 1. Higher values are slower, but give higher quality
-	ktxParams.qualityLevel = _qualityLevel;	// Range is 1 - 255 Lower gives better	compression/lower quality/faster
-	ktxParams.maxEndpoints = 0;		//set the maximum number of color endpoint clusters	from 1 - 16128. Default is 0
-	ktxParams.endpointRDOThreshold = 1.25f;//Lower is higher quality but less quality per output bit(try 1.0 - 3.0)
-	ktxParams.maxSelectors = 0;		//Manually set the maximum number of color selector clusters from 1 - 16128. Default is 0, unset.
-	ktxParams.selectorRDOThreshold = 1.5f;//Set selector RDO quality threshold. The default is 1.5. Lower is higher quality but less quality per output bit(try 1.0 - 3.0).
-	ktxParams.normalMap = false;
-	ktxParams.separateRGToRGB_A = false;
-	ktxParams.preSwizzle = false;
-	ktxParams.noEndpointRDO = false;
-	ktxParams.noSelectorRDO = false;
-
-	return compress(ktxParams);
 }
 
 IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 {	
-	if (m_pTexture == nullptr)
+	FILE* pFile = fopen(_pathOut, "wb");
+
+	if (pFile == NULL)
 	{
-		return InvalidArgument;
+		return Result::FileNotFound;
 	}
 
-	FILE* outFile = fopen(_pathOut, "wb");
-
-	if (outFile == nullptr)
+	if (ux3d::slimktx2::Result::Success != m_slimKTX2.serialize(pFile))
 	{
-		printf("ktx: failed to open file %s\n", _pathOut);
-		return FileNotFound;
+		fclose(pFile);
+		return Result::KtxError;
 	}
 
-	KTX_error_code result = ktxTexture_WriteToStdioStream(m_pTexture, outFile);
-	fclose(outFile);
-
-	if (result != KTX_SUCCESS)
-	{
-		printf("ktx: %s\n", ktxErrorString(result));
-		return KtxError;
-	}
-	
 	printf("Ktx file successfully written to: %s\n", _pathOut);
 
+	fclose(pFile);
 	return Success;
+}
+
+size_t IBLLib::KtxImage::readFromFile(void* _pUserData, void* _file, void* _pData, size_t _size)
+{
+	FILE* pFile = static_cast<FILE*>(_file);
+	return fread(_pData, sizeof(uint8_t), _size, pFile);
+}
+
+size_t IBLLib::KtxImage::tell(void* _pUserData, void* _file)
+{
+	FILE* pFile = static_cast<FILE*>(_file);
+	return ftell(pFile);
+}
+
+void IBLLib::KtxImage::log(void* _pUserData, const char* _format, va_list _args)
+{
+	char buffer[512];
+	vsnprintf(buffer, sizeof(buffer), _format, _args);
+	printf(buffer);
+}
+
+void IBLLib::KtxImage::writeToFile(void* _pUserData, void* _file, const void* _pData, size_t _size)
+{
+	FILE* pFile = static_cast<FILE*>(_file);
+	fwrite(_pData, sizeof(uint8_t), _size, pFile);
 }
 
 IBLLib::KtxImage::~KtxImage()
 {
-	if (m_pTexture != nullptr)
-	{
-		ktxTexture_Destroy(m_pTexture);
-		m_pTexture = nullptr;
-	}
+}
+
+void* IBLLib::KtxImage::allocate(void* _pUserData, size_t _size)
+{
+	return malloc(_size);
+}
+
+void IBLLib::KtxImage::deallocate(void* _pUserData, void* _pData)
+{
+	free(_pData);
 }

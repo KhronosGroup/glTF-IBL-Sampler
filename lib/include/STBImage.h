@@ -1,5 +1,6 @@
 #pragma once
 #include "ResultType.h"
+#include <stddef.h>
 
 namespace IBLLib
 {

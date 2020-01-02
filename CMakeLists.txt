@@ -59,25 +59,18 @@ find_package(Vulkan REQUIRED)
 #lib sources
 add_sources("lib/source/*.cpp" "lib_sources")
 add_sources("lib/include/*.h" "lib_sources")
-set(lib_sources "${lib_sources};${Vulkan_INCLUDE_DIR}/../Source/layers/vk_format_utils.cpp")
-set(lib_includes "${lib_includes};${Vulkan_INCLUDE_DIR}/../Source/layers")
+
+if (WIN32)
+	set(lib_sources "${lib_sources};${Vulkan_INCLUDE_DIR}/../Source/layers/vk_format_utils.cpp")
+	set(lib_includes "${lib_includes};${Vulkan_INCLUDE_DIR}/../Source/layers")
+else()
+	set(lib_sources "${lib_sources};${Vulkan_INCLUDE_DIR}/vk_format_utils.cpp")
+endif()
+
 add_include_folder("lib/include" "lib_includes")
 
 set(STB_INCLUDE_PATH "${CMAKE_CURRENT_LIST_DIR}/thirdparty/stb/" CACHE STRING "")
 set(lib_includes "${lib_includes};${STB_INCLUDE_PATH}")
-
-# KTX2
-set(KTX2_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/thirdparty/ktx2/include/" CACHE STRING "")
-set(lib_includes "${lib_includes};${KTX2_INCLUDE_DIR}")
-set(KTX2_LIBRARY "NOTFOUND" CACHE STRING "")
-
-if (NOT EXISTS ${KTX2_LIBRARY})
-	message(SEND_ERROR "KTX2_LIBRARY (libktx.gl) not found at '${KTX2_LIBRARY}'")
-endif()
-
-#cli sources
-add_sources("cli/source/*.cpp" "cli_sources")
-add_include_folder("cli/include" "cli_includes")
 
 #lib project
 add_library(lib SHARED ${lib_sources} ${lib_includes})
@@ -88,12 +81,15 @@ target_link_libraries(lib PRIVATE "${Vulkan_LIBRARIES}")
 
 find_package(Glslang REQUIRED)
 target_link_libraries(lib PRIVATE glslang SPIRV)
-target_link_libraries(lib PRIVATE ${KTX2_LIBRARY})
 #source_group("include" FILES ${lib_includes})
 
+# SLIMKTX2
+add_subdirectory("thirdparty/slimktx2")
+target_link_libraries(lib PRIVATE slimktx2)
+
 #cli project
+add_sources("cli/source/*.cpp" "cli_sources")
 add_executable(cli "${cli_sources}")
-target_include_directories(cli PRIVATE "${cli_includes}")
 target_link_libraries(cli PUBLIC lib)
 
 message(STATUS "")

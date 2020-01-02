@@ -1,5 +1,7 @@
 #include "vkHelper.h"
 #include "FileHelper.h"
+#include <cstring>
+#include "stdio.h"
 
 constexpr auto g_PipelineCachePath = "pipeline.cache";
 
@@ -1166,7 +1168,7 @@ void IBLLib::vkHelper::copyBufferToBasicImage2D(VkCommandBuffer _cmdBuffer, VkBu
 			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			region.imageSubresource.mipLevel = 0u;
 			region.imageSubresource.baseArrayLayer = 0u;
-			region.imageSubresource.layerCount = 1u;
+			region.imageSubresource.layerCount = img.info.arrayLayers;// 1u;
 
 			region.imageOffset = { 0, 0, 0 };
 			region.imageExtent = img.info.extent;
@@ -1298,6 +1300,27 @@ void IBLLib::vkHelper::beginRenderPass(VkCommandBuffer _cmdBuffer, VkRenderPass 
 	info.pClearValues = _clearValues.data();
 	
 	vkCmdBeginRenderPass(_cmdBuffer, &info, _contents);
+}
+
+void IBLLib::vkHelper::fillSamplerCreateInfo(VkSamplerCreateInfo& _samplerInfo)
+{
+	_samplerInfo.magFilter = VK_FILTER_LINEAR;
+	_samplerInfo.minFilter = VK_FILTER_LINEAR;
+	_samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+	_samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+	_samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT; 
+	
+	_samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	_samplerInfo.mipLodBias = 0.f;
+	_samplerInfo.minLod = 0.f;
+	_samplerInfo.maxLod = 1.f;
+	
+	_samplerInfo.anisotropyEnable = VK_FALSE;
+	_samplerInfo.maxAnisotropy = 0.f;
+	_samplerInfo.compareEnable = VK_FALSE;
+	_samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	
+	_samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
 }
 
 VkResult IBLLib::vkHelper::createSampler(VkSampler& _outSampler, VkSamplerCreateInfo _info)
@@ -1578,9 +1601,12 @@ void IBLLib::GraphicsPipelineDesc::addVertexBinding(uint32_t _binding, uint32_t 
 	info.stride = _stride;
 }
 
-void IBLLib::GraphicsPipelineDesc::addColorBlendAttachment(VkPipelineColorBlendAttachmentState& _attachment)
+void IBLLib::GraphicsPipelineDesc::addColorBlendAttachment(const VkPipelineColorBlendAttachmentState& _attachment, const uint32_t _count)
 {
-	m_colorBlendAttachments.push_back(_attachment);
+	for (uint32_t i = 0; i < _count; ++i)
+	{
+		m_colorBlendAttachments.push_back(_attachment);
+	}
 }
 
 

@@ -133,6 +133,7 @@ namespace IBLLib
 
 		void endRenderPass(VkCommandBuffer _cmdBuffer) const { vkCmdEndRenderPass(_cmdBuffer); };
 
+		void fillSamplerCreateInfo(VkSamplerCreateInfo& _samplerInfo);
 		VkResult createSampler(VkSampler& _outSampler, VkSamplerCreateInfo _info);
 
 		const VkImageCreateInfo* getCreateInfo(const VkImage _image);
@@ -265,7 +266,7 @@ namespace IBLLib
 		void addVertexAttribute(VkFormat _format, uint32_t _binding, uint32_t _offset, uint32_t _location = UINT32_MAX);
 		void addVertexBinding(uint32_t _binding, uint32_t _stride, VkVertexInputRate _rate = VK_VERTEX_INPUT_RATE_VERTEX);
 
-		void addColorBlendAttachment(VkPipelineColorBlendAttachmentState& _attachment);
+		void addColorBlendAttachment(const VkPipelineColorBlendAttachmentState& _attachment, const uint32_t _count = 1u);
 
 		void setPrimitiveTopology(VkPrimitiveTopology _topology, bool _enablePrimitiveRestart = false);
 		
