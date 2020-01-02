@@ -1,7 +1,9 @@
 #include "ktxImage.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
 
-IBLLib::KtxImage::KtxImage() 
+IBLLib::KtxImage::KtxImage()
 {
 	ux3d::slimktx2::Callbacks callbacks{};
 

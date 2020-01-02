@@ -1,5 +1,7 @@
 #include "vkHelper.h"
 #include "FileHelper.h"
+#include <cstring>
+#include "stdio.h"
 
 constexpr auto g_PipelineCachePath = "pipeline.cache";
 

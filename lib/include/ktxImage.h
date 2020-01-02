@@ -30,6 +30,7 @@ namespace IBLLib
 
 	private:
 		ux3d::slimktx2::SlimKTX2 m_slimKTX2;
+
 		
 		static size_t readFromFile(void* _pUserData, void* _file, void* _pData, size_t _size);
 		static size_t tell(void* _pUserData, void* _file);
