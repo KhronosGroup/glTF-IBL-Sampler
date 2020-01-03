@@ -447,6 +447,115 @@ namespace IBLLib
 		return Result::Success;
 	}
 
+	Result download2DImage(vkHelper& _vulkan, const VkImage _srcImage, const char* _outputPath, const VkImageLayout inputImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	{
+		const VkImageCreateInfo* pInfo = _vulkan.getCreateInfo(_srcImage);
+		if (pInfo == nullptr)
+		{
+			return Result::InvalidArgument;
+		}
+
+		Result res = Success;
+
+		const VkFormat format = pInfo->format;
+		const uint32_t formatByteSize = FormatElementSize(format);
+		const uint32_t width = pInfo->extent.width;
+		const uint32_t height = pInfo->extent.width;
+		const size_t imageByteSize = width * height * formatByteSize;
+
+		VkBuffer stagingBuffer{};
+
+		if (_vulkan.createBufferAndAllocate(
+			stagingBuffer, imageByteSize,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT,// VkBufferUsageFlags _usage,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)//VkMemoryPropertyFlags _memoryFlags, 
+			!= VK_SUCCESS)
+		{
+			return Result::VulkanError;
+		}
+
+		VkCommandBuffer downloadCmds = VK_NULL_HANDLE;
+		if (_vulkan.createCommandBuffer(downloadCmds) != VK_SUCCESS)
+		{
+			return Result::VulkanError;
+		}
+
+		if (_vulkan.beginCommandBuffer(downloadCmds, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) != VK_SUCCESS)
+		{
+			return Result::VulkanError;
+		}
+
+		// barrier on complete image
+		VkImageSubresourceRange  subresourceRange{};
+		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceRange.baseArrayLayer = 0u;
+		subresourceRange.layerCount = 1u;
+		subresourceRange.baseMipLevel = 0u;
+		subresourceRange.levelCount = 1u;
+
+		_vulkan.imageBarrier(downloadCmds, _srcImage,
+			inputImageLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // src stage, access
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+			subresourceRange);//dst stage, access
+
+		// copy 2D image to buffer
+		{
+			VkBufferImageCopy region{};
+
+			region.imageExtent = pInfo->extent;
+			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			region.imageSubresource.layerCount = 1u;
+			region.imageSubresource.mipLevel = 0;
+			region.imageSubresource.baseArrayLayer = 0;
+
+			_vulkan.copyImage2DToBuffer(downloadCmds, _srcImage, stagingBuffer, region);
+		}
+
+		if (_vulkan.endCommandBuffer(downloadCmds) != VK_SUCCESS)
+		{
+			return Result::VulkanError;
+		}
+
+		if (_vulkan.executeCommandBuffer(downloadCmds) != VK_SUCCESS)
+		{
+			return Result::VulkanError;
+		}
+
+		_vulkan.destroyCommandBuffer(downloadCmds);
+
+		// Image is copied to buffer
+		// Now map buffer and copy to ram
+		{
+			KtxImage ktxImage(width, height, format, 1u, false);
+
+			std::vector<uint8_t> imageData;
+			imageData.resize(imageByteSize);
+
+			if (_vulkan.readBufferData(stagingBuffer, imageData.data(), imageByteSize) != VK_SUCCESS)
+			{
+				return Result::VulkanError;
+			}
+
+			res = ktxImage.writeFace(imageData, 0, 0);
+
+			if (res != Result::Success)
+			{
+				return res;
+			}
+
+			_vulkan.destroyBuffer(stagingBuffer);
+
+			res = ktxImage.save(_outputPath);
+			if (res != Result::Success)
+			{
+				return res;
+			}
+		}
+
+		return Result::Success;
+	}
+
 	void generateMipmapLevels(vkHelper& _vulkan, const VkCommandBuffer _commandBuffer, const VkImage _image, uint32_t _maxMipLevels, uint32_t _sideLength, const VkImageLayout _currentImageLayout)
 	{
 		{ 
@@ -531,7 +640,7 @@ namespace IBLLib
 		} 
 	}
 
-	Result panoramaToCubemap(vkHelper& _vulkan, const VkCommandBuffer _commandBuffer, const VkRenderPass _renderPass, const VkShaderModule fullscreenVertexShader, const VkImage _panoramaImage, const VkImage _cubeMapImage)
+	Result panoramaToCubemap(vkHelper& _vulkan, const VkCommandBuffer _commandBuffer, /*const VkRenderPass _renderPass,*/ const VkShaderModule fullscreenVertexShader, const VkImage _panoramaImage, const VkImage _cubeMapImage)
 	{
 		IBLLib::Result res = Result::Success;
 
@@ -544,11 +653,27 @@ namespace IBLLib
 
 		const uint32_t cubeMapSideLength = textureInfo->extent.width;
 		const uint32_t maxMipLevels = textureInfo->mipLevels;
+		const VkFormat format = textureInfo->format;
 
 		VkShaderModule panoramaToCubeMapFragmentShader = VK_NULL_HANDLE;
 		if ((res = compileShader(_vulkan, IBLSAMPLER_SHADERS_DIR  "/filter.frag", "panoramaToCubeMap", panoramaToCubeMapFragmentShader, ShaderCompiler::Stage::Fragment)) != Result::Success)
 		{
 			return res;
+		}
+
+		VkRenderPass renderPass = VK_NULL_HANDLE;
+		{
+			RenderPassDesc renderPassDesc;
+
+			// add rendertargets (cubemap faces)
+			for (int face = 0; face < 6; ++face)
+			{
+				renderPassDesc.addAttachment(format);
+			}
+			if (_vulkan.createRenderPass(renderPass, renderPassDesc.getInfo()) != VK_SUCCESS)
+			{
+				return Result::VulkanError;
+			}
 		}
 
 		VkSamplerCreateInfo samplerInfo{};
@@ -595,7 +720,7 @@ namespace IBLLib
 			panormaToCubePipeline.addShaderStage(fullscreenVertexShader, VK_SHADER_STAGE_VERTEX_BIT, "main");
 			panormaToCubePipeline.addShaderStage(panoramaToCubeMapFragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT, "panoramaToCubeMap");
 
-			panormaToCubePipeline.setRenderPass(_renderPass);
+			panormaToCubePipeline.setRenderPass(renderPass);
 			panormaToCubePipeline.setPipelineLayout(panoramaPipelineLayout);
 						
 			VkPipelineColorBlendAttachmentState colorBlendAttachment{};
@@ -612,7 +737,7 @@ namespace IBLLib
 			}
 		}
 
-		///// Render Pass
+		/// Render Pass
 		std::vector<VkImageView> inputCubeMapViews(6u, VK_NULL_HANDLE);
 		for (size_t i = 0; i < inputCubeMapViews.size(); i++)
 		{
@@ -623,7 +748,7 @@ namespace IBLLib
 		}
 
 		VkFramebuffer cubeMapInputFramebuffer = VK_NULL_HANDLE;
-		if (_vulkan.createFramebuffer(cubeMapInputFramebuffer, _renderPass, cubeMapSideLength, cubeMapSideLength, inputCubeMapViews, 1u) != VK_SUCCESS)
+		if (_vulkan.createFramebuffer(cubeMapInputFramebuffer, renderPass, cubeMapSideLength, cubeMapSideLength, inputCubeMapViews, 1u) != VK_SUCCESS)
 		{
 			return Result::VulkanError;
 		}
@@ -644,7 +769,7 @@ namespace IBLLib
 
 		const std::vector<VkClearValue> clearValues(6u, { 0.0f, 0.0f, 1.0f, 1.0f });
 
-		_vulkan.beginRenderPass(_commandBuffer, _renderPass, cubeMapInputFramebuffer, VkRect2D{ 0u, 0u, cubeMapSideLength, cubeMapSideLength }, clearValues);
+		_vulkan.beginRenderPass(_commandBuffer, renderPass, cubeMapInputFramebuffer, VkRect2D{ 0u, 0u, cubeMapSideLength, cubeMapSideLength }, clearValues);
 		vkCmdDraw(_commandBuffer, 3, 1u, 0, 0);
 		_vulkan.endRenderPass(_commandBuffer);
 
@@ -653,9 +778,13 @@ namespace IBLLib
 } // !IBLLib
 
 
-IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPath, Distribution _distribution, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat, float _lodBias, bool _inputIsCubeMap, bool _debugOutput)
+IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCubeMap, const char* _outputPathLUT, Distribution _distribution, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat, float _lodBias, bool _inputIsCubeMap, bool _debugOutput)
 {
+	const bool generateLUT = _outputPathLUT != nullptr;
+
 	const VkFormat cubeMapFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
+	const VkFormat LUTFormat = VK_FORMAT_R16G16_SFLOAT;
+
 	const uint32_t cubeMapSideLength = _cubemapResolution;
 	const uint32_t outputMipLevels = _distribution == Lambertian ? 1u : _mipmapCount;
 	
@@ -776,6 +905,27 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPath, D
 		}
 	}
 
+	VkImage outputLUT = VK_NULL_HANDLE;
+	if (vulkan.createImage2DAndAllocate(outputLUT, cubeMapSideLength, cubeMapSideLength, LUTFormat,
+		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT /*| VK_IMAGE_USAGE_SAMPLED_BIT*/,
+		1u, 1u, VK_IMAGE_TILING_OPTIMAL, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_SHARING_MODE_EXCLUSIVE) != VK_SUCCESS)
+	{
+		return Result::VulkanError;
+	}
+
+	VkImageView outputLUTView = VK_NULL_HANDLE;
+	{
+		VkImageSubresourceRange subresourceRange{};
+		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceRange.layerCount = 1u;
+		subresourceRange.levelCount = 1u;
+
+		if (vulkan.createImageView(outputLUTView, outputLUT, subresourceRange, VK_FORMAT_UNDEFINED, VK_IMAGE_VIEW_TYPE_2D) != VK_SUCCESS)
+		{
+			return Result::VulkanError;
+		}
+	}
+
 	VkRenderPass renderPass = VK_NULL_HANDLE;
 	{
 		RenderPassDesc renderPassDesc;
@@ -784,6 +934,11 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPath, D
 		for (int face = 0; face < 6; ++face)
 		{
 			renderPassDesc.addAttachment(cubeMapFormat);
+		}
+
+		if (generateLUT)
+		{
+			renderPassDesc.addAttachment(LUTFormat);		
 		}
 
 		if (vulkan.createRenderPass(renderPass, renderPassDesc.getInfo()) != VK_SUCCESS)
@@ -811,7 +966,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPath, D
 	range.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	////////////////////////////////////////////////////////////////////////////////////////
-	// Specular Filter CubeMap
+	// Filter CubeMap Pipeline
 	VkDescriptorSet filterDescriptorSet = VK_NULL_HANDLE;
 	VkPipelineLayout filterPipelineLayout = VK_NULL_HANDLE;
 	VkPipeline filterPipeline = VK_NULL_HANDLE;
@@ -820,15 +975,15 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPath, D
 		uint32_t binding = 1u;
 		setLayout0.addCombinedImageSampler(cubeMipMapSampler, inputCubeMapCompleteView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, binding, VK_SHADER_STAGE_FRAGMENT_BIT); // change sampler ?
 
-		VkDescriptorSetLayout specularSetLayout = VK_NULL_HANDLE;
-		if (setLayout0.create(vulkan, specularSetLayout, filterDescriptorSet) != VK_SUCCESS)
+		VkDescriptorSetLayout filterSetLayout = VK_NULL_HANDLE;
+		if (setLayout0.create(vulkan, filterSetLayout, filterDescriptorSet) != VK_SUCCESS)
 		{
 			return Result::VulkanError;
 		}
 
 		vulkan.updateDescriptorSets(setLayout0.getWrites());
 
-		if (vulkan.createPipelineLayout(filterPipelineLayout, specularSetLayout, ranges) != VK_SUCCESS)
+		if (vulkan.createPipelineLayout(filterPipelineLayout, filterSetLayout, ranges) != VK_SUCCESS)
 		{
 			return Result::VulkanError;
 		}
@@ -845,7 +1000,13 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPath, D
 		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT; // TODO: rgb only
 		colorBlendAttachment.blendEnable = VK_FALSE;
 
-		filterCubeMapPipelineDesc.addColorBlendAttachment(colorBlendAttachment, 6u); 	
+		filterCubeMapPipelineDesc.addColorBlendAttachment(colorBlendAttachment, 6u); 
+
+		if (generateLUT)
+		{
+			//colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT;
+			filterCubeMapPipelineDesc.addColorBlendAttachment(colorBlendAttachment, 1u);
+		}
 
 		filterCubeMapPipelineDesc.setViewportExtent(VkExtent2D{ cubeMapSideLength, cubeMapSideLength });
 
@@ -874,7 +1035,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPath, D
 	{
 		printf("Transform panorama image to cube map\n");
 
-		res = panoramaToCubemap(vulkan, cubeMapCmd, renderPass, fullscreenVertexShader, panoramaImage, inputCubeMap);
+		res = panoramaToCubemap(vulkan, cubeMapCmd, fullscreenVertexShader, panoramaImage, inputCubeMap);
 		if (res != VK_SUCCESS)
 		{
 			printf("Failed to transform panorama image to cube map\n");
@@ -916,9 +1077,15 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPath, D
 	//Filter every mip level: from inputCubeMap->currentMipLevel
 	for (uint32_t currentMipLevel = 0; currentMipLevel < outputMipLevels; currentMipLevel++)
 	{
+		std::vector<VkImageView> renderTargetViews(outputCubeMapViews[currentMipLevel]);
+		if (generateLUT)
+		{
+			renderTargetViews.emplace_back(outputLUTView);
+		}
+
 		//Framebuffer will be destroyed automatically at shutdown
-		VkFramebuffer cubeMapOutputFramebuffer = VK_NULL_HANDLE;
-		if (vulkan.createFramebuffer(cubeMapOutputFramebuffer, renderPass, currentFramebufferSideLength, currentFramebufferSideLength, outputCubeMapViews[currentMipLevel], 1u) != VK_SUCCESS)
+		VkFramebuffer filterOutputFramebuffer = VK_NULL_HANDLE;
+		if (vulkan.createFramebuffer(filterOutputFramebuffer, renderPass, currentFramebufferSideLength, currentFramebufferSideLength, renderTargetViews, 1u) != VK_SUCCESS)
 		{
 			return Result::VulkanError;
 		}
@@ -941,7 +1108,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPath, D
 
 		vkCmdPushConstants(cubeMapCmd, filterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
 	
-		vulkan.beginRenderPass(cubeMapCmd, renderPass, cubeMapOutputFramebuffer, VkRect2D{ 0u, 0u, currentFramebufferSideLength, currentFramebufferSideLength }, clearValues);
+		vulkan.beginRenderPass(cubeMapCmd, renderPass, filterOutputFramebuffer, VkRect2D{ 0u, 0u, currentFramebufferSideLength, currentFramebufferSideLength }, clearValues);
 		vkCmdDraw(cubeMapCmd, 3, 1u, 0, 0);
 		vulkan.endRenderPass(cubeMapCmd);		 
 
@@ -952,21 +1119,21 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPath, D
 	//Output
 
 	VkFormat targetFormat = static_cast<VkFormat>(_targetFormat);
-	VkImageLayout currentSpecularCubeMapImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	VkImage convertedSpecularCubeMap = VK_NULL_HANDLE;
+	VkImageLayout currentCubeMapImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	VkImage convertedCubeMap = VK_NULL_HANDLE;
 
 	if(targetFormat != cubeMapFormat)
 	{		
-		if ((res = convertVkFormat(vulkan, cubeMapCmd, outputCubeMap, convertedSpecularCubeMap, targetFormat, currentSpecularCubeMapImageLayout)) != Success)
+		if ((res = convertVkFormat(vulkan, cubeMapCmd, outputCubeMap, convertedCubeMap, targetFormat, currentCubeMapImageLayout)) != Success)
 		{
 			printf("Failed to convert Image \n");
 			return res;
 		}
-		currentSpecularCubeMapImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		currentCubeMapImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
 	else 
 	{
-		convertedSpecularCubeMap = outputCubeMap;
+		convertedCubeMap = outputCubeMap;
 	}
 
 	if (vulkan.endCommandBuffer(cubeMapCmd) != VK_SUCCESS)
@@ -979,10 +1146,19 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPath, D
 		return Result::VulkanError;
 	}
 
-	if (downloadCubemap(vulkan, convertedSpecularCubeMap, _outputPath, currentSpecularCubeMapImageLayout) != VK_SUCCESS)
+	if (downloadCubemap(vulkan, convertedCubeMap, _outputPathCubeMap, currentCubeMapImageLayout) != VK_SUCCESS)
 	{
 		printf("Failed to download Image \n");
 		return Result::VulkanError;
+	}
+
+	if (generateLUT)
+	{
+		if (download2DImage(vulkan, outputLUT, _outputPathLUT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) != VK_SUCCESS)
+		{
+			printf("Failed to download Image \n");
+			return Result::VulkanError;
+		}
 	}
 
 	return Result::Success;

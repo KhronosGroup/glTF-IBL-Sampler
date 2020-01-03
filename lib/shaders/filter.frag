@@ -31,6 +31,8 @@ layout(location = 3) out vec4 outFace3;
 layout(location = 4) out vec4 outFace4;
 layout(location = 5) out vec4 outFace5;
 
+layout(location = 6) out vec2 outLUT;
+
 void writeFace(int face, vec3 colorIn)
 {
 	vec4 color = vec4(colorIn.rgb, 1.0f);

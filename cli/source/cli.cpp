@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
 	printf("inputIsCubeMap flag is set to %s\n", inputIsCubeMap ? "True" : "False");
 	printf("debug flag is set to %s\n", enableDebugOutput ? "True" : "False");
 
-	Result res = sample(pathIn, pathOutCubeMap, distribution, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, inputIsCubeMap, enableDebugOutput);
+	Result res = sample(pathIn, pathOutCubeMap, pathOutLUT, distribution, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, inputIsCubeMap, enableDebugOutput);
 
 	if (res != Result::Success)
 	{
