@@ -154,9 +154,9 @@ vec3 getSampleVector(uint sampleIndex, vec3 N)
 		sinTheta = sqrt(1.0 - cosTheta*cosTheta);		
 	}
 	else if(pFilterParameters.distribution == cCharlie)
-	{
+	{		
 		float alpha = pFilterParameters.roughness * pFilterParameters.roughness; // sqared ?
-		sinTheta = pow(Y, alpha / (2*alpha + 1));
+		sinTheta = pow(Y, alpha / (2.0*alpha + 1.0));
 		cosTheta = sqrt(1.0 - sinTheta * sinTheta);
 	}	
 	
@@ -224,13 +224,13 @@ vec3 filterColor(vec3 N)
 				lod += pFilterParameters.lodBias;
 			}
 						
-			if(pFilterParameters.distribution == cGGX)
+			if(pFilterParameters.distribution == cLambertian)
 			{
-				color += vec4(textureLod(uCubeMap, L, lod).rgb * NdotL, NdotL);				
+				color += vec4(texture(uCubeMap, H, lod).rgb, 1.0);						
 			}
-			else if(pFilterParameters.distribution == cLambertian)
+			else
 			{				
-				color += vec4(texture(uCubeMap, H, lod).rgb, 1.0);
+				color += vec4(textureLod(uCubeMap, L, lod).rgb * NdotL, NdotL);		
 			}			
 		}
 	}
