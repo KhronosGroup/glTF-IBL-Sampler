@@ -42,35 +42,36 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	for (int i = 1; i+1 < argc; i += 2)
+	for (int i = 1; i < argc; ++i)
 	{
+		const char* nextArg = i + 1 < argc ? argv[i+1] : nullptr;
 		if (strcmp(argv[i], "-inputPath") == 0)
 		{
-			pathIn = argv[i + 1];
+			pathIn = nextArg;
 		}
 		else if (strcmp(argv[i], "-outCubeMap") == 0)
 		{
-			pathOutCubeMap = argv[i + 1];
+			pathOutCubeMap = nextArg;
 		}
 		else if (strcmp(argv[i], "-outLUT") == 0)
 		{
-			pathOutLUT = argv[i + 1];
+			pathOutLUT = nextArg;
 		}
 		else if (strcmp(argv[i], "-sampleCount") == 0)
 		{
-			sampleCount = strtoul(argv[i + 1], NULL, 0);
+			sampleCount = strtoul(nextArg, NULL, 0);
 		}
 		else if (strcmp(argv[i], "-mipLevelCount") == 0)
 		{
-			mipLevelCount = strtoul(argv[i + 1], NULL, 0);
+			mipLevelCount = strtoul(nextArg, NULL, 0);
 		}
 		else if (strcmp(argv[i], "-cubeMapResolution") == 0)
 		{
-			cubeMapResolution = strtoul(argv[i + 1], NULL, 0);
+			cubeMapResolution = strtoul(nextArg, NULL, 0);
 		}
 		else if (strcmp(argv[i], "-targetFormat") == 0)
 		{
-			 targetFormatString = argv[i + 1];
+			 targetFormatString = nextArg;
 
 			if (strcmp(targetFormatString, "R8G8B8A8_UNORM") == 0)
 			{
@@ -87,7 +88,7 @@ int main(int argc, char* argv[])
 		}
 		else if (strcmp(argv[i], "-distribution") == 0)
 		{
-			distributionString = argv[i + 1];
+			distributionString = nextArg;
 
 			if (strcmp(distributionString, "Lambertian") == 0)
 			{
@@ -104,17 +105,15 @@ int main(int argc, char* argv[])
 		}
 		else if (strcmp(argv[i], "-lodBias") == 0)
 		{
-			lodBias = atof(argv[i + 1]);			
+			lodBias = atof(nextArg);
 		}
 		else if (strcmp(argv[i], "-inputIsCubeMap") == 0)
 		{
 			inputIsCubeMap = true;
-			i -= 1;
 		}
 		else if (strcmp(argv[i], "-debug") == 0)
 		{
 			enableDebugOutput = true;
-			i -= 1;
 		}
 	}
 
