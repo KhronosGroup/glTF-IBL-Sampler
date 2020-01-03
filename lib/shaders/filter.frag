@@ -241,7 +241,7 @@ void panoramaToCubeMap()
 }
 
 // entry point
-void filterCubeMapSpecular() 
+void filterCubeMap() 
 {
 	vec2 newUV = inUV * float(1 << (pFilterParameters.currentMipLevel));
 	 
@@ -259,19 +259,5 @@ void filterCubeMapSpecular()
 		//Debug output:
 		//writeFace(face,  texture(uCubeMap, direction).rgb);
 		//writeFace(face,   direction);
-	}
-}
-
-// entry point
-void filterCubeMapDiffuse() 
-{	
-	for(int face = 0; face < 6; ++face)
-	{
-		vec3 scan = uvToXYZ(face, inUV*2.0-1.0);		
-			
-		vec3 direction = normalize(scan);	
-		direction.y = -direction.y;
-
-		writeFace(face, filterColor(direction));
 	}
 }

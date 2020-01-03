@@ -692,14 +692,8 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		return res;
 	}
 
-	VkShaderModule filterCubeMapSpecular = VK_NULL_HANDLE;
-	if ((res = compileShader(vulkan, IBLSAMPLER_SHADERS_DIR "/filter.frag", "filterCubeMapSpecular", filterCubeMapSpecular, ShaderCompiler::Stage::Fragment)) != Result::Success)
-	{
-		return res;
-	}
-
-	VkShaderModule filterCubeMapDiffuse = VK_NULL_HANDLE;
-	if ((res = compileShader(vulkan, IBLSAMPLER_SHADERS_DIR "/filter.frag", "filterCubeMapDiffuse", filterCubeMapDiffuse, ShaderCompiler::Stage::Fragment)) != Result::Success)
+	VkShaderModule filterCubeMapFragmentShader = VK_NULL_HANDLE;
+	if ((res = compileShader(vulkan, IBLSAMPLER_SHADERS_DIR "/filter.frag", "filterCubeMap", filterCubeMapFragmentShader, ShaderCompiler::Stage::Fragment)) != Result::Success)
 	{
 		return res;
 	}
@@ -837,7 +831,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 	// Specular Filter CubeMap
 	VkDescriptorSet filterDescriptorSet = VK_NULL_HANDLE;
 	VkPipelineLayout filterPipelineLayout = VK_NULL_HANDLE;
-	VkPipeline specularFilterPipeline = VK_NULL_HANDLE;
+	VkPipeline filterPipeline = VK_NULL_HANDLE;
 	{
 		DescriptorSetInfo setLayout0;
 		uint32_t binding = 1u;
@@ -859,7 +853,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 		GraphicsPipelineDesc filterCubeMapPipelineDesc;
 
 		filterCubeMapPipelineDesc.addShaderStage(fullscreenVertexShader, VK_SHADER_STAGE_VERTEX_BIT, "main");
-		filterCubeMapPipelineDesc.addShaderStage(filterCubeMapSpecular, VK_SHADER_STAGE_FRAGMENT_BIT, "filterCubeMapSpecular");
+		filterCubeMapPipelineDesc.addShaderStage(filterCubeMapFragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT, "filterCubeMap");
 
 		filterCubeMapPipelineDesc.setRenderPass(renderPass);
 		filterCubeMapPipelineDesc.setPipelineLayout(filterPipelineLayout);
@@ -872,33 +866,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 
 		filterCubeMapPipelineDesc.setViewportExtent(VkExtent2D{ cubeMapSideLength, cubeMapSideLength });
 
-		if (vulkan.createPipeline(specularFilterPipeline, filterCubeMapPipelineDesc.getInfo()) != VK_SUCCESS)
-		{
-			return Result::VulkanError;
-		}
-	}
-
-	////////////////////////////////////////////////////////////////////////////////////////
-	// Diffuse Filter 
-	VkPipeline diffuseFilterPipeline = VK_NULL_HANDLE;
-	{
-		GraphicsPipelineDesc diffuseFilterPipelineDesc;
-
-		diffuseFilterPipelineDesc.addShaderStage(fullscreenVertexShader, VK_SHADER_STAGE_VERTEX_BIT, "main");
-		diffuseFilterPipelineDesc.addShaderStage(filterCubeMapDiffuse, VK_SHADER_STAGE_FRAGMENT_BIT, "filterCubeMapDiffuse");
-
-		diffuseFilterPipelineDesc.setRenderPass(renderPass);
-		diffuseFilterPipelineDesc.setPipelineLayout(filterPipelineLayout);
-
-		VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachment.blendEnable = VK_FALSE;
-
-		diffuseFilterPipelineDesc.addColorBlendAttachment(colorBlendAttachment, 6u);
-
-		diffuseFilterPipelineDesc.setViewportExtent(VkExtent2D{ cubeMapSideLength, cubeMapSideLength });
-
-		if (vulkan.createPipeline(diffuseFilterPipeline, diffuseFilterPipelineDesc.getInfo()) != VK_SUCCESS)
+		if (vulkan.createPipeline(filterPipeline, filterCubeMapPipelineDesc.getInfo()) != VK_SUCCESS)
 		{
 			return Result::VulkanError;
 		}
@@ -943,7 +911,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 	printf("Filtering specular term\n");
 	vulkan.bindDescriptorSet(cubeMapCmd, filterPipelineLayout, filterDescriptorSet);
 
-	vkCmdBindPipeline(cubeMapCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, specularFilterPipeline);
+	vkCmdBindPipeline(cubeMapCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, filterPipeline);
 
 	unsigned int currentFramebufferSideLength = cubeMapSideLength;
 
@@ -999,9 +967,9 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathSpe
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // dst stage, access		
 			subresourceRange);
 
-		vulkan.bindDescriptorSet(cubeMapCmd, filterPipelineLayout, filterDescriptorSet);
+		//vulkan.bindDescriptorSet(cubeMapCmd, filterPipelineLayout, filterDescriptorSet);
 
-		vkCmdBindPipeline(cubeMapCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, diffuseFilterPipeline);
+		vkCmdBindPipeline(cubeMapCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, filterPipeline);
 		
 		PushConstant values;
 		values.roughness = 0;
