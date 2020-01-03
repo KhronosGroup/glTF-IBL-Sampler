@@ -110,7 +110,8 @@ vec3 getImportanceSampleDirection(vec3 normal, float sinTheta, float cosTheta, f
 	return normalize(tangent * H.x + bitangent * H.y + normal * H.z);
 }
 
-float ndfTrowbridgeReitzGGX(float NdotH, float roughness)
+// NDF
+float D_GGX(float NdotH, float roughness)
 {
     float alpha = roughness * roughness;
     
@@ -121,6 +122,17 @@ float ndfTrowbridgeReitzGGX(float NdotH, float roughness)
     return alpha2 / (UX3D_MATH_PI * divisor * divisor); 
 }
 
+// NDF
+float D_Charlie(float sheenRoughness, float NdotH)
+{
+    sheenRoughness = max(sheenRoughness, 0.000001); //clamp (0,1]
+    float alphaG = sheenRoughness * sheenRoughness;
+    float invR = 1.0 / alphaG;
+    float cos2h = NdotH * NdotH;
+    float sin2h = 1.0 - cos2h;
+    return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * UX3D_MATH_PI);
+}
+
 vec3 getSampleVector(uint sampleIndex, vec3 N)
 {
 	float X = float(sampleIndex) / float(pFilterParameters.sampleCount);
@@ -128,22 +140,25 @@ vec3 getSampleVector(uint sampleIndex, vec3 N)
 	
 	float phi = 2.0 * UX3D_MATH_PI * X;
     float cosTheta = 0.f;
+	float sinTheta = 0.f;
 
 	if(pFilterParameters.distribution == cLambertian)
 	{
 		cosTheta = 1.0 - Y;
+		sinTheta = sqrt(1.0 - cosTheta*cosTheta);	
 	}
 	else if(pFilterParameters.distribution == cGGX)
 	{
 		float alpha = pFilterParameters.roughness * pFilterParameters.roughness;
-		cosTheta = sqrt((1.0 - Y) / (1.0 + (alpha*alpha - 1.0) * Y));		
+		cosTheta = sqrt((1.0 - Y) / (1.0 + (alpha*alpha - 1.0) * Y));
+		sinTheta = sqrt(1.0 - cosTheta*cosTheta);		
 	}
 	else if(pFilterParameters.distribution == cCharlie)
 	{
-		
-	}
-	
-	float sinTheta = sqrt(1.0 - cosTheta*cosTheta);
+		float alpha = pFilterParameters.roughness * pFilterParameters.roughness; // sqared ?
+		sinTheta = pow(Y, alpha / (2*alpha + 1));
+		cosTheta = sqrt(1.0 - sinTheta * sinTheta);
+	}	
 	
 	return getImportanceSampleDirection(N, sinTheta, cosTheta, phi);
 }
@@ -152,7 +167,7 @@ float PDF(vec3 V, vec3 H, vec3 N, vec3 L)
 {
 	if(pFilterParameters.distribution == cLambertian)
 	{
-		float NdotL = dot(N, L);
+		float NdotL = dot(N, L); // NdotH ?
 		return max(NdotL * UX3D_MATH_INV_PI, 0.0);
 	}
 	else if(pFilterParameters.distribution == cGGX)
@@ -160,12 +175,15 @@ float PDF(vec3 V, vec3 H, vec3 N, vec3 L)
 		float VdotH = dot(V, H); // if V = N then VdotH = NdotH and D * NdotH / (4.0 * VdotH) = D / 4.0 (which seems weird)
 		float NdotH = dot(N, H);
 	
-		float D = ndfTrowbridgeReitzGGX(NdotH, pFilterParameters.roughness);
+		float D = D_GGX(NdotH, pFilterParameters.roughness);
 		return max(D * NdotH / (4.0 * VdotH), 0.0);
 	}
 	else if(pFilterParameters.distribution == cCharlie)
 	{
-		
+		// a = pFilterParameters.roughness * pFilterParameters.roughness
+		// D = ((1/a + 2) * sin(t)^(1/a)) / 2pi
+		float NdotH = dot(N, H);
+		return max(D_Charlie(pFilterParameters.roughness, NdotH) * NdotH, 0.0);
 	}
 	
 	return 0.f;
@@ -236,7 +254,7 @@ void panoramaToCubeMap()
 	
 		vec2 src = dirToUV(direction);		
 			
-		writeFace(face,  texture(uPanorama, src).rgb);
+		writeFace(face, texture(uPanorama, src).rgb);
 	}
 }
 
