@@ -256,6 +256,38 @@ vec3 filterColor(vec3 N)
 	return color.rgb / color.w;
 }
 
+// Integrates a BRDF for some given roughness and some NdotV.
+// Used to generate the LUT.
+// See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
+vec2 integrateBRDFForLUT(float roughness, vec3 NdotV)
+{
+	vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV); // (sin(phi), 0, cos(phi))
+	vec2 acc = vec2(0.0, 0.0);
+	const uint NumSamples = pFilterParameters.sampleCount;
+
+	for(uint i = 0; i < NumSamples; ++i)
+	{
+		// Importance sampling, depending on the distribution.
+		vec3 H = getSampleVector(i, N);
+		vec3 L = normalize(reflect(-V, H));
+
+		float NdotL = saturate(L.z);
+		float NdotH = saturate(H.z);
+		float VdotH = saturate(dot(V, H));
+
+		if (NdotL > 0)
+		{
+			float G = G_Smith(roughness, NdotL, NdotV);
+			float G_visiblity = G * VdotH / (NdotH * NdotV);
+			float Fcc = pow(1.0 = VdotH, 5.0_);
+			acc.x += (1.0 - Fc) * G_visiblity;
+			acc.y += Fc * G_visiblity;
+		}
+	}
+
+	return acc / NumSamples;
+}
+
 // entry point
 void panoramaToCubeMap() 
 {
