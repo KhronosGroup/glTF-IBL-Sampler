@@ -138,9 +138,9 @@ float D_Charlie(float sheenRoughness, float NdotH)
 // Geometry function.
 // Schlick approximation to Smith.
 // See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
-float G_Smith(float roughness, float NdotL, float NdotV)
+float G_SmithIBL(float roughness, float NdotL, float NdotV)
 {
-	float k = ((roughness + 1.0) * (roughness + 1.0)) / 8.0;
+	float k = (roughness * roughness) / 2.0;
 	float G_shadowing = NdotL / (NdotL * (1.0 - k) + k);
 	float G_masking = NdotV / (NdotV * (1.0 - k) + k);
 	return G_shadowing * G_masking;
