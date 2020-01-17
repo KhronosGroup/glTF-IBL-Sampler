@@ -4,7 +4,7 @@
 #include "STBImage.h"
 #include "FileHelper.h"
 #include "ktxImage.h"
-#include <vk_format_utils.h>
+#include <vulkan/vk_format_utils.h>
 #include <stdio.h>
 
 namespace IBLLib
