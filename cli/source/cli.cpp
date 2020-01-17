@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 
 	if (pathOutLUT == nullptr)
 	{
-		pathOutLUT = "outputLUT.ktx2"; // use PNG instead?
+		pathOutLUT = "outputLUT.png";
 	}
 
 	printf("inputPath set to %s \n", pathIn);

@@ -527,7 +527,6 @@ namespace IBLLib
 		// Image is copied to buffer
 		// Now map buffer and copy to ram
 		{
-			KtxImage ktxImage(width, height, format, 1u, false);
 
 			std::vector<uint8_t> imageData;
 			imageData.resize(imageByteSize);
@@ -537,20 +536,32 @@ namespace IBLLib
 				return Result::VulkanError;
 			}
 
-			res = ktxImage.writeFace(imageData, 0, 0);
+            int channels = FormatChannelCount(pInfo->format);
 
+			// Copy the outputted image (format with 1, 2 or 4 channels) into a 3-channel image.
+			// This is kind of a hack (this function is currently only used to write the BRDF LUT to disk):
+			// It seems that stb_write_image is not able to write PNGs with 4 components,
+			// and 2-channel images are displayed as grey-alpha,
+			// which makes is impossible to compare the outputted LUT with already
+			// existing LUT PNGs.
+			std::vector<uint8_t> imageDataThreeChannel(imageData.size() * (4 / channels), 0);
+			for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    for (int c = 0; c < std::min(channels, 3); c++) {
+                        imageDataThreeChannel[3 * (x * width + y) + c] =
+                            imageData[channels * (x * width + y) + c];
+                    }
+                }
+			}
+
+            STBImage stb_image;
+            res = stb_image.savePng(_outputPath, width, height, 3, imageDataThreeChannel.data());
 			if (res != Result::Success)
 			{
 				return res;
 			}
 
 			_vulkan.destroyBuffer(stagingBuffer);
-
-			res = ktxImage.save(_outputPath);
-			if (res != Result::Success)
-			{
-				return res;
-			}
 		}
 
 		return Result::Success;
@@ -783,7 +794,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 	const bool generateLUT = _outputPathLUT != nullptr;
 
 	const VkFormat cubeMapFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
-	const VkFormat LUTFormat = VK_FORMAT_R16G16_SFLOAT;
+	const VkFormat LUTFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
 	const uint32_t cubeMapSideLength = _cubemapResolution;
 	const uint32_t outputMipLevels = _distribution == Lambertian ? 1u : _mipmapCount;
