@@ -8,7 +8,7 @@ else()
 		PATHS "$ENV{VULKAN_SDK}/../source")
 endif()
 
-if (NOT Glslang_Parent_DIR STREQUAL "")
+if (NOT Glslang_Parent_DIR STREQUAL "Glslang_Parent_DIR-NOTFOUND")
 	set(ENABLE_GLSLANG_BINARIES FALSE CACHE BOOL "")
 	set(ENABLE_HLSL FALSE CACHE BOOL "")
 	set(ENABLE_OPT FALSE CACHE BOOL "")
