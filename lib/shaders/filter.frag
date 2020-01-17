@@ -135,9 +135,8 @@ float D_Charlie(float sheenRoughness, float NdotH)
     return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * UX3D_MATH_PI);
 }
 
-// Geometry function.
-// Schlick approximation to Smith.
-// See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
+// Smith's Schlick-GGX Geometry function.
+// Roughness is remapped for image based lightning.
 float G_SmithIBL(float roughness, float NdotL, float NdotV)
 {
 	float k = (roughness * roughness) / 2.0;
