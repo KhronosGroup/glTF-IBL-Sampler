@@ -258,11 +258,12 @@ vec3 filterColor(vec3 N)
 // Integrates a BRDF for some given roughness and some NdotV.
 // Used to generate the LUT.
 // See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
-vec2 integrateBRDFForLUT(float roughness, vec3 NdotV)
+vec2 integrateBRDFForLUT(float roughness, float NdotV)
 {
 	vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV); // (sin(phi), 0, cos(phi))
 	vec2 acc = vec2(0.0, 0.0);
 	const uint NumSamples = pFilterParameters.sampleCount;
+	vec3 N = vec3(0.0, 0.0, 1.0);
 
 	for(uint i = 0; i < NumSamples; ++i)
 	{
@@ -274,11 +275,11 @@ vec2 integrateBRDFForLUT(float roughness, vec3 NdotV)
 		float NdotH = saturate(H.z);
 		float VdotH = saturate(dot(V, H));
 
-		if (NdotL > 0)
+		if (NdotL > 0.0)
 		{
-			float G = G_Smith(roughness, NdotL, NdotV);
+			float G = G_SmithIBL(roughness, NdotL, NdotV);
 			float G_visiblity = G * VdotH / (NdotH * NdotV);
-			float Fcc = pow(1.0 = VdotH, 5.0_);
+			float Fc = pow(1.0 - VdotH, 5.0);
 			acc.x += (1.0 - Fc) * G_visiblity;
 			acc.y += Fc * G_visiblity;
 		}
@@ -322,4 +323,14 @@ void filterCubeMap()
 		//writeFace(face,  texture(uCubeMap, direction).rgb);
 		//writeFace(face,   direction);
 	}
+
+	// Write LUT:
+	// x-coordinate: NdotV
+	// y-coordinate: roughness
+	// The LUT generation is only done for the first mip level.
+	//if (pFilterParameters.currentMipLevel == 0)
+	//{
+		//outLUT = integrateBRDFForLUT(inUV.y, inUV.x);
+		outLUT = vec2(inUV.y, inUV.x);
+	//}
 }
