@@ -188,7 +188,7 @@ float PDF(vec3 V, vec3 H, vec3 N, vec3 L)
 		float NdotH = dot(N, H);
 	
 		float D = D_GGX(NdotH, pFilterParameters.roughness);
-		return max(D * NdotH / (4.0 * VdotH), 0.0);
+		return max(D * NdotH / (4.0 * VdotH), 0.0); // todo: try to derive '... / 4 VoH'
 	}
 	else if(pFilterParameters.distribution == cCharlie)
 	{
@@ -276,6 +276,8 @@ vec2 LUT_GGX(float NdotV, float roughness)
 
 		if (NdotL > 0.0)
 		{
+			// todo: this is ggx specific.
+			//  brdf / pdf (gpu gems 3, p. 471)
 			float G = G_SmithIBL(roughness, NdotL, NdotV);
 			float G_visiblity = G * VdotH / (NdotH * NdotV);
 			float Fc = pow(1.0 - VdotH, 5.0);
