@@ -969,6 +969,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		uint32_t width = 1024u;
 		float lodBias = 0.f;
 		Distribution distribution = Lambertian;
+		uint32_t generateLUT = 0;
 	};
 
 	std::vector<VkPushConstantRange> ranges(1u);
@@ -1085,14 +1086,18 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 
 	vkCmdBindPipeline(cubeMapCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, filterPipeline);
 
-	unsigned int currentFramebufferSideLength = cubeMapSideLength;
-
-	//Filter every mip level: from inputCubeMap->currentMipLevel
-	for (uint32_t currentMipLevel = 0; currentMipLevel < outputMipLevels; currentMipLevel++)
+	// Filter every mip level: from inputCubeMap->currentMipLevel
+	// The mip levels are filtered from the smallest mipmap to the largest mipmap,
+	// i.e. the last mipmap is filtered last.
+	// This has the desirable side effect that the framebuffer size of the last filter pass
+	// matches with the LUT size, allowing the LUT to only be written in the last pass
+	// without worrying to preserve the LUT's image contents between the previous render passes.
+	for (uint32_t currentMipLevel = outputMipLevels - 1; currentMipLevel != -1; currentMipLevel--)
 	{
+		unsigned int currentFramebufferSideLength = cubeMapSideLength >> currentMipLevel;
 		std::vector<VkImageView> renderTargetViews(outputCubeMapViews[currentMipLevel]);
-		if (generateLUT)
-		{
+
+		if (generateLUT) {
 			renderTargetViews.emplace_back(outputLUTView);
 		}
 
@@ -1118,14 +1123,13 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		values.width = cubeMapSideLength;
 		values.lodBias = _lodBias;
 		values.distribution = _distribution;
+		values.generateLUT = generateLUT && (currentMipLevel == 0);
 
 		vkCmdPushConstants(cubeMapCmd, filterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
 	
 		vulkan.beginRenderPass(cubeMapCmd, renderPass, filterOutputFramebuffer, VkRect2D{ 0u, 0u, currentFramebufferSideLength, currentFramebufferSideLength }, clearValues);
 		vkCmdDraw(cubeMapCmd, 3, 1u, 0, 0);
 		vulkan.endRenderPass(cubeMapCmd);		 
-
-		currentFramebufferSideLength = currentFramebufferSideLength >> 1;
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////////

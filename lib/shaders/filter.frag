@@ -19,6 +19,7 @@ layout(push_constant) uniform FilterParameters {
   uint width;
   float lodBias;
   uint distribution; // enum
+  uint generateLUT;
 } pFilterParameters;
 
 layout (location = 0) in vec2 inUV;
@@ -331,6 +332,10 @@ void filterCubeMap()
 	//if (pFilterParameters.currentMipLevel == 0)
 	//{
 		//outLUT = integrateBRDFForLUT(inUV.y, inUV.x);
-		outLUT = vec2(inUV.y, inUV.x);
+		//outLUT = vec2(inUV.y, inUV.x);
 	//}
+	if (pFilterParameters.generateLUT != 0)
+	{
+		outLUT = vec2(inUV.y, inUV.x);
+	}
 }
