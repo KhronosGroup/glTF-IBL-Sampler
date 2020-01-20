@@ -145,11 +145,11 @@ float G_SmithIBL(float roughness, float NdotL, float NdotV)
 	return G_shadowing * G_masking;
 }
 
-vec3 getSampleVector(uint sampleIndex, vec3 N)
+vec3 getSampleVector(uint sampleIndex, vec3 N, float roughness)
 {
 	float X = float(sampleIndex) / float(pFilterParameters.sampleCount);
 	float Y = Hammersley(sampleIndex);
-	
+
 	float phi = 2.0 * UX3D_MATH_PI * X;
     float cosTheta = 0.f;
 	float sinTheta = 0.f;
@@ -161,13 +161,13 @@ vec3 getSampleVector(uint sampleIndex, vec3 N)
 	}
 	else if(pFilterParameters.distribution == cGGX)
 	{
-		float alpha = pFilterParameters.roughness * pFilterParameters.roughness;
+		float alpha = roughness * roughness;
 		cosTheta = sqrt((1.0 - Y) / (1.0 + (alpha*alpha - 1.0) * Y));
 		sinTheta = sqrt(1.0 - cosTheta*cosTheta);		
 	}
 	else if(pFilterParameters.distribution == cCharlie)
-	{		
-		float alpha = pFilterParameters.roughness * pFilterParameters.roughness; // sqared ?
+	{
+		float alpha = roughness * roughness; // sqared ?
 		sinTheta = pow(Y, alpha / (2.0*alpha + 1.0));
 		cosTheta = sqrt(1.0 - sinTheta * sinTheta);
 	}	
@@ -209,7 +209,7 @@ vec3 filterColor(vec3 N)
 	
 	for(uint i = 0; i < NumSamples; ++i)
 	{
-		vec3 H = getSampleVector(i, N);
+		vec3 H = getSampleVector(i, N, pFilterParameters.roughness);
 
 		// Note: reflect takes incident vector.
 		// Note: N = V
@@ -268,7 +268,7 @@ vec2 integrateBRDFForLUT(float roughness, float NdotV)
 	for(uint i = 0; i < NumSamples; ++i)
 	{
 		// Importance sampling, depending on the distribution.
-		vec3 H = getSampleVector(i, N);
+		vec3 H = getSampleVector(i, N, roughness);
 		vec3 L = normalize(reflect(-V, H));
 
 		float NdotL = saturate(L.z);
