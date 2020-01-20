@@ -536,7 +536,9 @@ namespace IBLLib
 				return Result::VulkanError;
 			}
 
-            uint32_t channels = ux3d::slimktx2::SlimKTX2::getTypeSize(static_cast<ux3d::slimktx2::Format>(pInfo->format));
+			// Compute channel count by dividing the pixel byte length through each channels byte length.
+            uint32_t channels = ux3d::slimktx2::SlimKTX2::getPixelSize(static_cast<ux3d::slimktx2::Format>(pInfo->format)) /
+            		ux3d::slimktx2::SlimKTX2::getTypeSize(static_cast<ux3d::slimktx2::Format>(pInfo->format));
 
 			// Copy the outputted image (format with 1, 2 or 4 channels) into a 3-channel image.
 			// This is kind of a hack (this function is currently only used to write the BRDF LUT to disk):
