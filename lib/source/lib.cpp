@@ -969,7 +969,6 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		uint32_t width = 1024u;
 		float lodBias = 0.f;
 		Distribution distribution = Lambertian;
-		uint32_t generateLUT = 0;
 	};
 
 	std::vector<VkPushConstantRange> ranges(1u);
@@ -1123,7 +1122,6 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		values.width = cubeMapSideLength;
 		values.lodBias = _lodBias;
 		values.distribution = _distribution;
-		values.generateLUT = generateLUT && (currentMipLevel == 0);
 
 		vkCmdPushConstants(cubeMapCmd, filterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
 	
