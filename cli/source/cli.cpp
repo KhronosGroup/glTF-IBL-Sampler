@@ -8,15 +8,19 @@ using namespace IBLLib;
 int main(int argc, char* argv[])
 {
 	const char* pathIn = nullptr;
-	const char* pathOutSpecular = nullptr;
-	const char* pathOutDiffuse = nullptr;
+	const char* pathOutCubeMap = nullptr;
+	const char* pathOutLUT = nullptr;
 	unsigned int sampleCount = 1024u;
 	unsigned int mipLevelCount = 10u;
 	unsigned int cubeMapResolution = 1024u;
 	OutputFormat targetFormat = R16G16B16A16_SFLOAT;
+	Distribution distribution = GGX;
 	float lodBias = 1.0f;
 	bool inputIsCubeMap = false;
 	bool enableDebugOutput = false;
+
+	const char* targetFormatString = "R16G16B16A16_SFLOAT";
+	const char* distributionString = "GGX";
 
 	if (argc == 1 ||
 		strcmp(argv[1], "-h") == 0 ||
@@ -25,8 +29,9 @@ int main(int argc, char* argv[])
 		printf("glTF-IBL-Sampler usage:\n");
 
 		printf("-inputPath: path to panorama image (default) or cube map (if inputIsCubeMap flag ist set) \n");
-		printf("-specularOutput: output path for specular term of filtered cube map\n");
-		printf("-diffuseOutput: output path for diffuse term of filtered cube map\n");
+		printf("-outCubeMap: output path for filtered cube map\n");
+		printf("-outLUT output path for BRDF LUT\n");
+		printf("-distribution NDF to sample (Lambertian, GGX, Charlie)\n");
 		printf("-sampleCount: number of samples used for filtering (default = 1024)\n");
 		printf("-mipLevelCount: number of mip levels of specular cube map\n");
 		printf("-cubeMapResolution: resolution of output cube map (default = 1024)\n");
@@ -37,74 +42,78 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	for (int i = 1; i+1 < argc; i += 2)
+	for (int i = 1; i < argc; ++i)
 	{
+		const char* nextArg = i + 1 < argc ? argv[i+1] : nullptr;
 		if (strcmp(argv[i], "-inputPath") == 0)
 		{
-			pathIn = argv[i + 1];
-			printf("inputPath set to %s \n", pathIn);
+			pathIn = nextArg;
 		}
-		else if (strcmp(argv[i], "-specularOutput") == 0)
+		else if (strcmp(argv[i], "-outCubeMap") == 0)
 		{
-			pathOutSpecular = argv[i + 1];
-			printf("specularOutput set to %s \n", pathOutSpecular);
+			pathOutCubeMap = nextArg;
 		}
-		else if (strcmp(argv[i], "-diffuseOutput") == 0)
+		else if (strcmp(argv[i], "-outLUT") == 0)
 		{
-			pathOutDiffuse = argv[i + 1];
-			printf("diffuseOutput set to %s \n", pathOutDiffuse);
+			pathOutLUT = nextArg;
 		}
 		else if (strcmp(argv[i], "-sampleCount") == 0)
 		{
-			sampleCount = strtoul(argv[i + 1], NULL, 0);
-			printf("sampleCount set to %d \n", sampleCount);
+			sampleCount = strtoul(nextArg, NULL, 0);
 		}
 		else if (strcmp(argv[i], "-mipLevelCount") == 0)
 		{
-			mipLevelCount = strtoul(argv[i + 1], NULL, 0);
-			printf("mipLevelCount set to %d \n", mipLevelCount);
+			mipLevelCount = strtoul(nextArg, NULL, 0);
 		}
 		else if (strcmp(argv[i], "-cubeMapResolution") == 0)
 		{
-			cubeMapResolution = strtoul(argv[i + 1], NULL, 0);
-			printf("cubeMapResolution set to %d \n", cubeMapResolution);
+			cubeMapResolution = strtoul(nextArg, NULL, 0);
 		}
 		else if (strcmp(argv[i], "-targetFormat") == 0)
 		{
-			const char* targetFormatString = argv[i + 1];
+			 targetFormatString = nextArg;
 
 			if (strcmp(targetFormatString, "R8G8B8A8_UNORM") == 0)
 			{
 				targetFormat = R8G8B8A8_UNORM;
-				printf("targetFormat set to R8G8B8A8_UNORM \n");
 			}
 			else if (strcmp(targetFormatString, "R16G16B16A16_SFLOAT") == 0)
 			{
 				targetFormat = R16G16B16A16_SFLOAT;
-				printf("targetFormat set to R16G16B16A16_SFLOAT \n");
 			}
 			else if (strcmp(targetFormatString, "R32G32B32A32_SFLOAT") == 0)
 			{
 				targetFormat = R32G32B32A32_SFLOAT;
-				printf("targetFormat set to R32G32B32A32_SFLOAT \n");
+			}
+		}
+		else if (strcmp(argv[i], "-distribution") == 0)
+		{
+			distributionString = nextArg;
+
+			if (strcmp(distributionString, "Lambertian") == 0)
+			{
+				distribution = Lambertian;
+			}
+			else if (strcmp(distributionString, "GGX") == 0)
+			{
+				distribution = GGX;
+			}
+			else if (strcmp(distributionString, "Charlie") == 0)
+			{
+				distribution = Charlie;
 			}
 		}
 		else if (strcmp(argv[i], "-lodBias") == 0)
 		{
-			lodBias = atof(argv[i + 1]);
-			printf("lodBias set to %f \n", lodBias);
+			lodBias = atof(nextArg);
 		}
 		else if (strcmp(argv[i], "-inputIsCubeMap") == 0)
 		{
 			inputIsCubeMap = true;
-			i -= 1;
-			printf("inputIsCubeMap flag is set.\n");
 		}
 		else if (strcmp(argv[i], "-debug") == 0)
 		{
 			enableDebugOutput = true;
-			i -= 1;
-			printf("debug flag is set.\n");
 		}
 	}
 
@@ -119,17 +128,33 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	if (pathOutSpecular == nullptr)
+	if (pathOutCubeMap == nullptr)
 	{
-		pathOutSpecular = "outputSpecular.ktx2";
+		pathOutCubeMap = "outputCubeMap.ktx2";
 	}
 
-	if (pathOutDiffuse == nullptr)
+	if (pathOutLUT == nullptr)
 	{
-		pathOutDiffuse = "outputDiffuse.ktx2";
+		pathOutLUT = "outputLUT.png";
 	}
 
-	Result res = sample(pathIn, pathOutSpecular, pathOutDiffuse, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, inputIsCubeMap, enableDebugOutput);
+	printf("inputPath set to %s \n", pathIn);
+	printf("outCubeMap set to %s \n", pathOutCubeMap);
+
+	if (pathOutLUT != nullptr)
+	{
+		printf("outLUT set to %s \n", pathOutLUT);	
+	}
+
+	printf("sampleCount set to %d \n", sampleCount);
+	printf("mipLevelCount set to %d \n", mipLevelCount);
+	printf("targetFormat set to %s\n", targetFormatString);
+	printf("distribution set to %s\n", distributionString);
+	printf("lodBias set to %f \n", lodBias);
+	printf("inputIsCubeMap flag is set to %s\n", inputIsCubeMap ? "True" : "False");
+	printf("debug flag is set to %s\n", enableDebugOutput ? "True" : "False");
+
+	Result res = sample(pathIn, pathOutCubeMap, pathOutLUT, distribution, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, inputIsCubeMap, enableDebugOutput);
 
 	if (res != Result::Success)
 	{
