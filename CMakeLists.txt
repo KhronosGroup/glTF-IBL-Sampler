@@ -59,14 +59,6 @@ find_package(Vulkan REQUIRED)
 #lib sources
 add_sources("lib/source/*.cpp" "lib_sources")
 add_sources("lib/include/*.h" "lib_sources")
-
-if (WIN32)
-	set(lib_includes "${lib_includes};${Vulkan_INCLUDE_DIR}/../Source/layers")
-else()
-	set(lib_sources "${lib_sources};${Vulkan_INCLUDE_DIR}/vulkan/vk_format_utils.cpp")
-	set(lib_includes "${lib_includes};${Vulkan_INCLUDE_DIR}/vulkan")
-endif()
-
 add_include_folder("lib/include" "lib_includes")
 
 set(STB_INCLUDE_PATH "${CMAKE_CURRENT_LIST_DIR}/thirdparty/stb/" CACHE STRING "")

@@ -4,7 +4,7 @@
 #include "STBImage.h"
 #include "FileHelper.h"
 #include "ktxImage.h"
-#include <vulkan/vk_format_utils.h>
+#include <algorithm>
 #include <stdio.h>
 
 namespace IBLLib
@@ -109,7 +109,7 @@ namespace IBLLib
 		const uint32_t width = ktxImage.getWidth();
 		const uint32_t height = ktxImage.getHeight();
 		const VkFormat vkFormat = ktxImage.getFormat();
-		const uint32_t formatSize = FormatElementSize(vkFormat);
+		const uint32_t formatSize = ux3d::slimktx2::SlimKTX2::getPixelSize(static_cast<ux3d::slimktx2::Format>(vkFormat));
 		
 		if(ktxImage.getLevels() > 1)
 		{
@@ -305,7 +305,7 @@ namespace IBLLib
 		Result res = Success;
 
 		const VkFormat cubeMapFormat = pInfo->format; 
-		const uint32_t cubeMapFormatByteSize = FormatElementSize(cubeMapFormat);
+		const uint32_t cubeMapFormatByteSize = ux3d::slimktx2::SlimKTX2::getPixelSize(static_cast<ux3d::slimktx2::Format>(cubeMapFormat));
 		const uint32_t cubeMapSideLength = pInfo->extent.width;
 		const uint32_t mipLevels = pInfo->mipLevels;
 
@@ -458,7 +458,7 @@ namespace IBLLib
 		Result res = Success;
 
 		const VkFormat format = pInfo->format;
-		const uint32_t formatByteSize = FormatElementSize(format);
+		const uint32_t formatByteSize = ux3d::slimktx2::SlimKTX2::getPixelSize(static_cast<ux3d::slimktx2::Format>(format));
 		const uint32_t width = pInfo->extent.width;
 		const uint32_t height = pInfo->extent.width;
 		const size_t imageByteSize = width * height * formatByteSize;
@@ -466,7 +466,7 @@ namespace IBLLib
 		VkBuffer stagingBuffer{};
 
 		if (_vulkan.createBufferAndAllocate(
-			stagingBuffer, imageByteSize,
+			stagingBuffer, static_cast<uint32_t>(imageByteSize),
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT,// VkBufferUsageFlags _usage,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)//VkMemoryPropertyFlags _memoryFlags, 
 			!= VK_SUCCESS)
@@ -536,7 +536,7 @@ namespace IBLLib
 				return Result::VulkanError;
 			}
 
-            int channels = FormatChannelCount(pInfo->format);
+            uint32_t channels = ux3d::slimktx2::SlimKTX2::getTypeSize(static_cast<ux3d::slimktx2::Format>(pInfo->format));
 
 			// Copy the outputted image (format with 1, 2 or 4 channels) into a 3-channel image.
 			// This is kind of a hack (this function is currently only used to write the BRDF LUT to disk):
@@ -545,9 +545,9 @@ namespace IBLLib
 			// which makes is impossible to compare the outputted LUT with already
 			// existing LUT PNGs.
 			std::vector<uint8_t> imageDataThreeChannel(imageData.size() * (4 / channels), 0);
-			for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
-                    for (int c = 0; c < std::min(channels, 3); c++) {
+			for (uint32_t x = 0; x < width; x++) {
+                for (uint32_t y = 0; y < height; y++) {
+                    for (uint32_t c = 0; c < std::min(channels, 3u); c++) {
                         imageDataThreeChannel[3 * (x * width + y) + c] =
                             imageData[channels * (x * width + y) + c];
                     }
