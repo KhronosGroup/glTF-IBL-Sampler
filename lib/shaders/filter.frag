@@ -255,10 +255,9 @@ vec3 filterColor(vec3 N)
 	return color.rgb / color.w;
 }
 
-// Integrates a BRDF for some given roughness and some NdotV.
-// Used to generate the LUT.
+// Compute LUT for GGX distribution.
 // See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
-vec2 integrateBRDFForLUT(float roughness, float NdotV)
+vec2 LUT_GGX(float NdotV, float roughness)
 {
 	vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV); // (sin(phi), 0, cos(phi))
 	vec2 acc = vec2(0.0, 0.0);
@@ -329,7 +328,14 @@ void filterCubeMap()
 	// y-coordinate: roughness
 	if (pFilterParameters.currentMipLevel == 0)
 	{
-		//outLUT = vec2(inUV.y, inUV.x);
-		outLUT = integrateBRDFForLUT(inUV.y, inUV.x);
+		if (pFilterParameters.distribution == cGGX)
+		{
+			outLUT = LUT_GGX(inUV.x, inUV.y);
+		}
+		else
+		{
+			// Yet to be implemented.
+			outLUT = vec2(0.0, 0.0);
+		}
 	}
 }
