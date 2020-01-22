@@ -112,6 +112,12 @@ vec3 getImportanceSampleDirection(vec3 normal, float sinTheta, float cosTheta, f
 	return normalize(tangent * H.x + bitangent * H.y + normal * H.z);
 }
 
+// https://github.com/google/filament/blob/master/shaders/src/brdf.fs#L136
+float V_Neubelt(float NdotL, float NdotV)
+{
+    return clamp(1.0 / (4.0 * (NdotL + NdotV - NdotL * NdotV)),0.0,1.0);
+}
+
 // NDF
 float D_GGX(float NdotH, float roughness)
 {
@@ -175,7 +181,7 @@ vec3 getSampleVector(uint sampleIndex, vec3 N, float roughness)
 	return getImportanceSampleDirection(N, sinTheta, cosTheta, phi);
 }
 
-float PDF(vec3 V, vec3 H, vec3 N, vec3 L)
+float PDF(vec3 V, vec3 H, vec3 N, vec3 L, float roughness)
 {
 	if(pFilterParameters.distribution == cLambertian)
 	{
@@ -187,7 +193,7 @@ float PDF(vec3 V, vec3 H, vec3 N, vec3 L)
 		float VdotH = dot(V, H); // if V = N then VdotH = NdotH and D * NdotH / (4.0 * VdotH) = D / 4.0 (which seems weird)
 		float NdotH = dot(N, H);
 	
-		float D = D_GGX(NdotH, pFilterParameters.roughness);
+		float D = D_GGX(NdotH, roughness);
 		return max(D * NdotH / (4.0 * VdotH), 0.0); // todo: try to derive '... / 4 VoH'
 	}
 	else if(pFilterParameters.distribution == cCharlie)
@@ -195,7 +201,7 @@ float PDF(vec3 V, vec3 H, vec3 N, vec3 L)
 		// a = pFilterParameters.roughness * pFilterParameters.roughness
 		// D = ((1/a + 2) * sin(t)^(1/a)) / 2pi
 		float NdotH = dot(N, H);
-		return max(D_Charlie(pFilterParameters.roughness, NdotH) * NdotH, 0.0);
+		return max(D_Charlie(roughness, NdotH) * NdotH, 0.0);
 	}
 	
 	return 0.f;
@@ -228,7 +234,7 @@ vec3 filterColor(vec3 N)
 				// Mipmap Filtered Samples 
 				// see https://github.com/derkreature/IBLBaker
 				// see https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch20.html
-				float pdf = PDF(V, H, N, L);
+				float pdf = PDF(V, H, N, L, pFilterParameters.roughness );
 				
 				float solidAngleSample = 1.0 / (NumSamples * pdf);
 				
@@ -257,34 +263,64 @@ vec3 filterColor(vec3 N)
 
 // Compute LUT for GGX distribution.
 // See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
-vec2 LUT_GGX(float NdotV, float roughness)
+vec2 LUT(float NdotV, float roughness)
 {
 	vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV); // (sin(phi), 0, cos(phi))
 	vec2 acc = vec2(0.0, 0.0);
 	const uint NumSamples = pFilterParameters.sampleCount;
 	vec3 N = vec3(0.0, 0.0, 1.0);
 
-	for(uint i = 0; i < NumSamples; ++i)
-	{
-		// Importance sampling, depending on the distribution.
-		vec3 H = getSampleVector(i, N, roughness);
-		vec3 L = normalize(reflect(-V, H));
 
-		float NdotL = saturate(L.z);
-		float NdotH = saturate(H.z);
-		float VdotH = saturate(dot(V, H));
 
-		if (NdotL > 0.0)
+		for(uint i = 0; i < NumSamples; ++i)
 		{
-			// todo: this is ggx specific.
-			//  brdf / pdf (gpu gems 3, p. 471)
-			float G = G_SmithIBL(roughness, NdotL, NdotV);
-			float G_visiblity = G * VdotH / (NdotH * NdotV);
-			float Fc = pow(1.0 - VdotH, 5.0);
-			acc.x += (1.0 - Fc) * G_visiblity;
-			acc.y += Fc * G_visiblity;
+			// Importance sampling, depending on the distribution.
+			vec3 H = getSampleVector(i, N, roughness);
+			vec3 L = normalize(reflect(-V, H));
+
+			float NdotL = saturate(L.z);
+			float NdotH = saturate(H.z);
+			float VdotH = saturate(dot(V, H));
+			if (NdotL > 0.0)
+			{
+				if (pFilterParameters.distribution == cGGX)
+				{
+					//https://bruop.github.io/ibl/
+					//TODO Funktion austauschen
+						float G = G_SmithIBL(roughness, NdotL, NdotV);
+						float G_visiblity = G * VdotH / (NdotH * NdotV);
+						float Fc = pow(1.0 - VdotH, 5.0);
+						acc.x += (1.0 - Fc) * G_visiblity;
+						acc.y += Fc * G_visiblity;
+					
+				}
+
+				if (pFilterParameters.distribution == cCharlie)
+				{
+					//TODO Begin
+
+					float sheenDistribution = D_Charlie(roughness, NdotH);
+					float sheenVisibility = V_Neubelt(NdotL, NdotV);
+					float sheenBRDF = sheenDistribution * sheenVisibility;
+
+					sheenBRDF=1.0/(4*(VdotH));
+
+					float sheenPDF = PDF(V, H, N, L, roughness);
+					sheenPDF=1.0/(2*UX3D_MATH_PI);
+
+					float weightedBRDF = sheenBRDF/sheenPDF;
+					
+					float Fc =0;
+					//acc.x += (1.0 - Fc) * weightedBRDF;
+					//acc.y += Fc * weightedBRDF;
+					
+					acc.x += weightedBRDF;
+					acc.y += 0;
+					//TODO End
+				}
+			}
+
 		}
-	}
 
 	return acc / NumSamples;
 }
@@ -330,14 +366,8 @@ void filterCubeMap()
 	// y-coordinate: roughness
 	if (pFilterParameters.currentMipLevel == 0)
 	{
-		if (pFilterParameters.distribution == cGGX)
-		{
-			outLUT = LUT_GGX(inUV.x, inUV.y);
-		}
-		else
-		{
-			// Yet to be implemented.
-			outLUT = vec2(0.0, 0.0);
-		}
+		
+		outLUT = LUT(inUV.x, inUV.y);
+	
 	}
 }
