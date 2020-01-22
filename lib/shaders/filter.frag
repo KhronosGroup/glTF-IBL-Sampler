@@ -264,12 +264,21 @@ float V_SmithGGXCorrelated(float NoV, float NoL, float roughness) {
 // See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
 vec2 LUT(float NdotV, float roughness)
 {
-	vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV); // (sin(phi), 0, cos(phi))
-	vec2 acc = vec2(0.0, 0.0);
-	const uint NumSamples = pFilterParameters.sampleCount;
+	// Compute spherical view vector: (sin(phi), 0, cos(phi))
+	vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV);
+
+	// The macro surface normal just points up.
 	vec3 N = vec3(0.0, 0.0, 1.0);
 
-	for(uint i = 0; i < NumSamples; ++i)
+	// To make the LUT independant from the material's F0, which is part of the Fresnel term
+	// when substituted by Schlick's approximation, we factor it out of the integral,
+	// yielding to the form: F0 * I1 + I2
+	// I1 and I2 are slighlty different in the Fresnel term, but both only depend on
+	// NoL and roughness, so they are both numerically integrated and written into two channels.
+	float A = 0;
+	float B = 0;
+
+	for(uint i = 0; i < pFilterParameters.sampleCount; ++i)
 	{
 		// Importance sampling, depending on the distribution.
 		vec3 H = getSampleVector(i, N, roughness);
@@ -282,17 +291,21 @@ vec2 LUT(float NdotV, float roughness)
 		{
 			if (pFilterParameters.distribution == cGGX)
 			{
+				// LUT for GGX distribution.
+
 				// Taken from: https://bruop.github.io/ibl
 				// Shadertoy: https://www.shadertoy.com/view/3lXXDB
-				// Terms besides V are from the GGX PDF we're dividing by
+				// Terms besides V are from the GGX PDF we're dividing by.
 				float V_pdf = V_SmithGGXCorrelated(NdotV, NdotL, roughness) * VdotH * NdotL / NdotH;
 				float Fc = pow(1.0 - VdotH, 5.0);
-				acc.x += (1.0 - Fc) * V_pdf;
-				acc.y += Fc * V_pdf;
+				A += (1.0 - Fc) * V_pdf;
+				B += Fc * V_pdf;
 			}
 
 			if (pFilterParameters.distribution == cCharlie)
 			{
+				// LUT for Charlie distribution.
+
 				//TODO Begin
 
 				float sheenDistribution = D_Charlie(roughness, NdotH);
@@ -310,14 +323,19 @@ vec2 LUT(float NdotV, float roughness)
 				//acc.x += (1.0 - Fc) * weightedBRDF;
 				//acc.y += Fc * weightedBRDF;
 
-				acc.x += weightedBRDF;
-				acc.y += 0;
+				A += weightedBRDF;
+				B += 0;
 				//TODO End
 			}
 		}
 	}
 
-	return 4 * acc / NumSamples;
+	// TODO: Doc, why scale by 4?
+
+	// The PDF is simply pdf(v, h) -> NDF * <nh>.
+	// To parametrize the PDF over l, use the Jacobian transform, yielding to: pdf(v, l) -> NDF * <nh> / 4<vh>
+	// Since the BRDF divide through the PDF to be normalized, the 4 can be pulled out of the integral.
+	return 4 * vec2(A, B) / pFilterParameters.sampleCount;
 }
 
 // entry point
