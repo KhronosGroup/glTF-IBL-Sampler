@@ -270,57 +270,54 @@ vec2 LUT(float NdotV, float roughness)
 	const uint NumSamples = pFilterParameters.sampleCount;
 	vec3 N = vec3(0.0, 0.0, 1.0);
 
+	for(uint i = 0; i < NumSamples; ++i)
+	{
+		// Importance sampling, depending on the distribution.
+		vec3 H = getSampleVector(i, N, roughness);
+		vec3 L = normalize(reflect(-V, H));
 
-
-		for(uint i = 0; i < NumSamples; ++i)
+		float NdotL = saturate(L.z);
+		float NdotH = saturate(H.z);
+		float VdotH = saturate(dot(V, H));
+		if (NdotL > 0.0)
 		{
-			// Importance sampling, depending on the distribution.
-			vec3 H = getSampleVector(i, N, roughness);
-			vec3 L = normalize(reflect(-V, H));
-
-			float NdotL = saturate(L.z);
-			float NdotH = saturate(H.z);
-			float VdotH = saturate(dot(V, H));
-			if (NdotL > 0.0)
+			if (pFilterParameters.distribution == cGGX)
 			{
-				if (pFilterParameters.distribution == cGGX)
-				{
-					//https://bruop.github.io/ibl/
-					//TODO Funktion austauschen
-						float G = G_SmithIBL(roughness, NdotL, NdotV);
-						float G_visiblity = G * VdotH / (NdotH * NdotV);
-						float Fc = pow(1.0 - VdotH, 5.0);
-						acc.x += (1.0 - Fc) * G_visiblity;
-						acc.y += Fc * G_visiblity;
-					
-				}
+				//https://bruop.github.io/ibl/
+				//TODO Funktion austauschen
+					float G = G_SmithIBL(roughness, NdotL, NdotV);
+					float G_visiblity = G * VdotH / (NdotH * NdotV);
+					float Fc = pow(1.0 - VdotH, 5.0);
+					acc.x += (1.0 - Fc) * G_visiblity;
+					acc.y += Fc * G_visiblity;
 
-				if (pFilterParameters.distribution == cCharlie)
-				{
-					//TODO Begin
-
-					float sheenDistribution = D_Charlie(roughness, NdotH);
-					float sheenVisibility = V_Neubelt(NdotL, NdotV);
-					float sheenBRDF = sheenDistribution * sheenVisibility;
-
-					sheenBRDF=1.0/(4*(VdotH));
-
-					float sheenPDF = PDF(V, H, N, L, roughness);
-					sheenPDF=1.0/(2*UX3D_MATH_PI);
-
-					float weightedBRDF = sheenBRDF/sheenPDF;
-					
-					float Fc =0;
-					//acc.x += (1.0 - Fc) * weightedBRDF;
-					//acc.y += Fc * weightedBRDF;
-					
-					acc.x += weightedBRDF;
-					acc.y += 0;
-					//TODO End
-				}
 			}
 
+			if (pFilterParameters.distribution == cCharlie)
+			{
+				//TODO Begin
+
+				float sheenDistribution = D_Charlie(roughness, NdotH);
+				float sheenVisibility = V_Neubelt(NdotL, NdotV);
+				float sheenBRDF = sheenDistribution * sheenVisibility;
+
+				sheenBRDF=1.0/(4*(VdotH));
+
+				float sheenPDF = PDF(V, H, N, L, roughness);
+				sheenPDF=1.0/(2*UX3D_MATH_PI);
+
+				float weightedBRDF = sheenBRDF/sheenPDF;
+
+				float Fc =0;
+				//acc.x += (1.0 - Fc) * weightedBRDF;
+				//acc.y += Fc * weightedBRDF;
+
+				acc.x += weightedBRDF;
+				acc.y += 0;
+				//TODO End
+			}
 		}
+	}
 
 	return acc / NumSamples;
 }
