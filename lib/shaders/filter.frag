@@ -141,16 +141,6 @@ float D_Charlie(float sheenRoughness, float NdotH)
     return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * UX3D_MATH_PI);
 }
 
-// Smith's Schlick-GGX Geometry function.
-// Roughness is remapped for image based lightning.
-float G_SmithIBL(float roughness, float NdotL, float NdotV)
-{
-	float k = (roughness * roughness) / 2.0;
-	float G_shadowing = NdotL / (NdotL * (1.0 - k) + k);
-	float G_masking = NdotV / (NdotV * (1.0 - k) + k);
-	return G_shadowing * G_masking;
-}
-
 vec3 getSampleVector(uint sampleIndex, vec3 N, float roughness)
 {
 	float X = float(sampleIndex) / float(pFilterParameters.sampleCount);
@@ -261,6 +251,15 @@ vec3 filterColor(vec3 N)
 	return color.rgb / color.w;
 }
 
+// From the filament docs. Geometric Shadowing function
+// https://google.github.io/filament/Filament.html#toc4.4.2
+float V_SmithGGXCorrelated(float NoV, float NoL, float roughness) {
+	float a2 = pow(roughness, 4.0);
+	float GGXV = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2);
+	float GGXL = NoV * sqrt(NoL * NoL * (1.0 - a2) + a2);
+	return 0.5 / (GGXV + GGXL);
+}
+
 // Compute LUT for GGX distribution.
 // See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
 vec2 LUT(float NdotV, float roughness)
@@ -283,14 +282,13 @@ vec2 LUT(float NdotV, float roughness)
 		{
 			if (pFilterParameters.distribution == cGGX)
 			{
-				//https://bruop.github.io/ibl/
-				//TODO Funktion austauschen
-					float G = G_SmithIBL(roughness, NdotL, NdotV);
-					float G_visiblity = G * VdotH / (NdotH * NdotV);
-					float Fc = pow(1.0 - VdotH, 5.0);
-					acc.x += (1.0 - Fc) * G_visiblity;
-					acc.y += Fc * G_visiblity;
-
+				// Taken from: https://bruop.github.io/ibl
+				// Shadertoy: https://www.shadertoy.com/view/3lXXDB
+				// Terms besides V are from the GGX PDF we're dividing by
+				float V_pdf = V_SmithGGXCorrelated(NdotV, NdotL, roughness) * VdotH * NdotL / NdotH;
+				float Fc = pow(1.0 - VdotH, 5.0);
+				acc.x += (1.0 - Fc) * V_pdf;
+				acc.y += Fc * V_pdf;
 			}
 
 			if (pFilterParameters.distribution == cCharlie)
@@ -319,7 +317,7 @@ vec2 LUT(float NdotV, float roughness)
 		}
 	}
 
-	return acc / NumSamples;
+	return 4 * acc / NumSamples;
 }
 
 // entry point
