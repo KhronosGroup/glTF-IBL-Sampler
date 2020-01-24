@@ -118,7 +118,7 @@ float V_Neubelt(float NdotL, float NdotV)
     return clamp(1.0 / (4.0 * (NdotL + NdotV - NdotL * NdotV)),0.0,1.0);
 }
 
-// NDF
+// NDF: Trowbridge-Reitz GGX
 float D_GGX(float NdotH, float roughness)
 {
     float alpha = roughness * roughness;
@@ -260,6 +260,38 @@ float V_SmithGGXCorrelated(float NoV, float NoL, float roughness) {
 	return 0.5 / (GGXV + GGXL);
 }
 
+vec2 LUT_uniform_sampling(float NdotV, float roughness)
+{
+	vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV);
+	vec3 N = vec3(0.0, 0.0, 1.0);
+
+	float A = 0;
+	float B = 0;
+
+	const uint Nk = 10000; // todo: use push constant
+
+	for (int k = 0; k <= Nk; k++) {
+		float x = 2 * float(k) / float(Nk) - 1; // [-1, 1]
+		vec3 H = vec3(x, 0, sqrt(1 - x * x)); // Interpolates over upper hemisphere arc.
+		vec3 L = normalize(reflect(-V, H));
+
+		float NdotL = saturate(L.z);
+		float NdotH = saturate(H.z);
+		float VdotH = saturate(dot(V, H));
+
+		if (NdotL > 0.0) // why not let H interpolate over arc and compute L = norm(V + L)?
+		{
+			float D = D_GGX(NdotH, roughness);
+			float V = V_SmithGGXCorrelated(NdotV, NdotL, roughness) * NdotL;
+			float Fc = pow(1.0 - VdotH, 5.0);
+			A += (1.0 - Fc) * V * D;
+			B += Fc * V * D;
+		}
+	}
+
+	return vec2(A, B) / float(Nk);
+}
+
 // Compute LUT for GGX distribution.
 // See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
 vec2 LUT(float NdotV, float roughness)
@@ -379,8 +411,7 @@ void filterCubeMap()
 	// y-coordinate: roughness
 	if (pFilterParameters.currentMipLevel == 0)
 	{
-		
-		outLUT = LUT(inUV.x, inUV.y);
-	
+		//outLUT = LUT(inUV.x, inUV.y);
+		outLUT = LUT_uniform_sampling(inUV.x, inUV.y) * vec2(1, 0);
 	}
 }
