@@ -268,11 +268,29 @@ vec2 LUT_uniform_sampling(float NdotV, float roughness)
 	float A = 0;
 	float B = 0;
 
-	const uint Nk = 10000; // todo: use push constant
+	const uint Nk = 100; // todo: use push constant
+	vec3 hamAcc = vec3(0, 0, 0);
 
-	for (int k = 0; k <= Nk; k++) {
-		float x = 2 * float(k) / float(Nk) - 1; // [-1, 1]
-		vec3 H = vec3(x, 0, sqrt(1 - x * x)); // Interpolates over upper hemisphere arc.
+	for (int k = 0; k < Nk; k++) {
+		float X = float(k) / float(Nk);
+		float Y = Hammersley(k);
+
+		float phi = 2.0 * UX3D_MATH_PI * X;
+		float cosTheta = 1.0 - Y;
+		float sinTheta = sqrt(1 - cosTheta * cosTheta);
+
+//		float alpha = roughness * roughness;
+//		cosTheta = sqrt((1.0 - Y) / (1.0 + (alpha*alpha - 1.0) * Y));
+//		sinTheta = sqrt(1.0 - cosTheta*cosTheta);
+
+		vec3 d = normalize(vec3(
+			cosTheta * cos(phi),
+			sinTheta * sin(phi),
+			sinTheta
+			));
+		hamAcc += d;
+
+		vec3 H = d;
 		vec3 L = normalize(reflect(-V, H));
 
 		float NdotL = saturate(L.z);
@@ -289,7 +307,8 @@ vec2 LUT_uniform_sampling(float NdotV, float roughness)
 		}
 	}
 
-	return vec2(A, B) / float(Nk);
+	//return vec2(hamAcc.z / float(Nk), 0);
+	return 2 * UX3D_MATH_PI * vec2(A, B) / float(Nk);
 }
 
 // Compute LUT for GGX distribution.
@@ -411,7 +430,7 @@ void filterCubeMap()
 	// y-coordinate: roughness
 	if (pFilterParameters.currentMipLevel == 0)
 	{
-		//outLUT = LUT(inUV.x, inUV.y);
-		outLUT = LUT_uniform_sampling(inUV.x, inUV.y) * vec2(1, 0);
+//		outLUT = LUT(inUV.x, inUV.y) * vec2(1, 0);
+		outLUT = LUT_uniform_sampling(inUV.x, inUV.y) * vec2(0, 1);
 	}
 }
