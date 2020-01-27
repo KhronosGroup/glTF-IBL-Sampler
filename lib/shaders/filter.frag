@@ -260,6 +260,83 @@ float V_SmithGGXCorrelated(float NoV, float NoL, float roughness) {
 	return 0.5 / (GGXV + GGXL);
 }
 
+vec2 LUT_uniform_sampling(float NdotV, float roughness)
+{
+	vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV);
+	vec3 N = vec3(0.0, 0.0, 1.0);
+
+	float A = 0;
+	float B = 0;
+
+	const uint Nk = 10000; // todo: use push constant
+
+	for (int k = 0; k <= Nk; k++) {
+		float x = 2 * float(k) / float(Nk) - 1; // [-1, 1]
+		vec3 H = vec3(x, 0, sqrt(1 - x * x)); // Interpolates over upper hemisphere arc.
+		vec3 L = normalize(reflect(-V, H));
+
+		float NdotL = saturate(L.z);
+		float NdotH = saturate(H.z);
+		float VdotH = saturate(dot(V, H));
+
+		if (NdotL > 0.0) // why not let H interpolate over arc and compute L = norm(V + L)?
+		{
+			float D = D_GGX(NdotH, roughness);
+			float V = V_SmithGGXCorrelated(NdotV, NdotL, roughness) * NdotL;
+			float Fc = pow(1.0 - VdotH, 5.0);
+			A += (1.0 - Fc) * V * D;
+			B += Fc * V * D;
+		}
+	}
+
+	return vec2(A, B) / float(Nk);
+}
+
+vec3 hemisphereUniformSample(vec2 u) 
+{ // pdf = 1.0 / (2.0 * F_PI);
+    float phi = 2.0f * UX3D_MATH_PI * u.x;
+    float cosTheta = 1 - u.y;
+    float sinTheta = sqrt(1 - cosTheta * cosTheta);
+    return vec3( sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
+}
+
+float VisibilityAshikhmin(float NdotV, float NdotL) 
+{
+    // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
+    return 1.0 / (4.0 * (NdotL + NdotV - NdotL * NdotV));
+}
+
+//https://github.com/google/filament/blob/master/libs/ibl/src/CubemapIBL.cpp
+float DFV_Charlie_Uniform(float NdotV, float roughness)
+{
+	const uint numSamples=pFilterParameters.sampleCount;
+
+	float r = 0.0;
+	vec3 V = vec3(sqrt(1.0f - NdotV * NdotV), 0.0f, NdotV);
+	for (int i = 0; i < numSamples; i++) 
+	{
+		vec2 u ; // Hammersley(i) uses pFilterParameters.sampleCount
+		u.x = float(i) / float(numSamples);
+		u.y = Hammersley(i);
+
+		vec3 H = hemisphereUniformSample(u);
+		vec3 L = 2 * dot(V, H) * H - V;
+		float VdotH = saturate(dot(V, H));
+		float NdotL = saturate(L.z);
+		float NdotH = saturate(H.z);
+		
+		if (NdotL > 0.0) 
+		{
+			float visibility = VisibilityAshikhmin(NdotV, NdotL);
+			float distribution = D_Charlie(roughness, NdotH);
+			r += visibility * distribution * NdotL * VdotH; // VdotH comes from the Jacobian, 1/(4*VdotH)
+		}
+	}
+	// uniform sampling, the PDF is 1/2pi, 4 comes from the Jacobian
+	float result = r * (4.0 * 2.0 * UX3D_MATH_PI / float(numSamples));
+	return result;
+}
+
 // Compute LUT for GGX distribution.
 // See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
 vec2 LUT(float NdotV, float roughness)
@@ -302,31 +379,6 @@ vec2 LUT(float NdotV, float roughness)
 				B += Fc * V_pdf;
 			}
 
-			if (pFilterParameters.distribution == cCharlie)
-			{
-				// LUT for Charlie distribution.
-
-				//TODO Begin
-
-				float sheenDistribution = D_Charlie(roughness, NdotH);
-				float sheenVisibility = V_Neubelt(NdotL, NdotV);
-				float sheenBRDF = sheenDistribution * sheenVisibility;
-
-				sheenBRDF=1.0/(4*(VdotH));
-
-				float sheenPDF = PDF(V, H, N, L, roughness);
-				sheenPDF=1.0/(2*UX3D_MATH_PI);
-
-				float weightedBRDF = sheenBRDF/sheenPDF;
-
-				float Fc =0;
-				//acc.x += (1.0 - Fc) * weightedBRDF;
-				//acc.y += Fc * weightedBRDF;
-
-				A += weightedBRDF;
-				B += 0;
-				//TODO End
-			}
 		}
 	}
 
@@ -379,8 +431,19 @@ void filterCubeMap()
 	// y-coordinate: roughness
 	if (pFilterParameters.currentMipLevel == 0)
 	{
-		
-		outLUT = LUT(inUV.x, inUV.y);
-	
+		vec2 result;
+		if (pFilterParameters.distribution == cGGX)
+		{
+			result = LUT(inUV.x, inUV.y);
+		}
+
+
+		if (pFilterParameters.distribution == cCharlie)
+		{
+			result.x=DFV_Charlie_Uniform(inUV.x, inUV.y);
+			result.y=0.0f;
+		}
+
+		outLUT = result;
 	}
 }
