@@ -824,7 +824,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 	const bool generateLUT = _outputPathLUT != nullptr;
 
 	const VkFormat cubeMapFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
-	const VkFormat LUTFormat = VK_FORMAT_R8G8B8A8_SRGB;
+	const VkFormat LUTFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
 	const uint32_t cubeMapSideLength = _cubemapResolution;
 	const uint32_t outputMipLevels = _distribution == Lambertian ? 1u : _mipmapCount;

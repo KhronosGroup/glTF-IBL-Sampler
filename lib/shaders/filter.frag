@@ -31,7 +31,7 @@ layout(location = 3) out vec4 outFace3;
 layout(location = 4) out vec4 outFace4;
 layout(location = 5) out vec4 outFace5;
 
-layout(location = 6) out vec2 outLUT;
+layout(location = 6) out vec3 outLUT;
 
 void writeFace(int face, vec3 colorIn)
 {
@@ -307,7 +307,7 @@ float VisibilityAshikhmin(float NdotV, float NdotL)
 }
 
 //https://github.com/google/filament/blob/master/libs/ibl/src/CubemapIBL.cpp
-float DFV_Charlie_Uniform(float NdotV, float roughness)
+float LUT_CharlieUniform(float NdotV, float roughness)
 {
 	const uint numSamples=pFilterParameters.sampleCount;
 
@@ -339,7 +339,7 @@ float DFV_Charlie_Uniform(float NdotV, float roughness)
 
 // Compute LUT for GGX distribution.
 // See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
-vec2 LUT(float NdotV, float roughness)
+vec2 LUT_GGX(float NdotV, float roughness)
 {
 	// Compute spherical view vector: (sin(phi), 0, cos(phi))
 	vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV);
@@ -366,18 +366,15 @@ vec2 LUT(float NdotV, float roughness)
 		float VdotH = saturate(dot(V, H));
 		if (NdotL > 0.0)
 		{
-			if (pFilterParameters.distribution == cGGX)
-			{
-				// LUT for GGX distribution.
+			// LUT for GGX distribution.
 
-				// Taken from: https://bruop.github.io/ibl
-				// Shadertoy: https://www.shadertoy.com/view/3lXXDB
-				// Terms besides V are from the GGX PDF we're dividing by.
-				float V_pdf = V_SmithGGXCorrelated(NdotV, NdotL, roughness) * VdotH * NdotL / NdotH;
-				float Fc = pow(1.0 - VdotH, 5.0);
-				A += (1.0 - Fc) * V_pdf;
-				B += Fc * V_pdf;
-			}
+			// Taken from: https://bruop.github.io/ibl
+			// Shadertoy: https://www.shadertoy.com/view/3lXXDB
+			// Terms besides V are from the GGX PDF we're dividing by.
+			float V_pdf = V_SmithGGXCorrelated(NdotV, NdotL, roughness) * VdotH * NdotL / NdotH;
+			float Fc = pow(1.0 - VdotH, 5.0);
+			A += (1.0 - Fc) * V_pdf;
+			B += Fc * V_pdf;
 
 		}
 	}
@@ -431,19 +428,18 @@ void filterCubeMap()
 	// y-coordinate: roughness
 	if (pFilterParameters.currentMipLevel == 0)
 	{
-		vec2 result;
-		if (pFilterParameters.distribution == cGGX)
+		vec3 result;
+		//if (pFilterParameters.distribution == cGGX)
 		{
-			result = LUT(inUV.x, inUV.y);
+			result.xy = LUT_GGX(inUV.x, inUV.y);
 		}
 
 
-		if (pFilterParameters.distribution == cCharlie)
+		//if (pFilterParameters.distribution == cCharlie)
 		{
-			result.x=DFV_Charlie_Uniform(inUV.x, inUV.y);
-			result.y=0.0f;
+			result.z = LUT_CharlieUniform(inUV.x, inUV.y);
 		}
-
+		
 		outLUT = result;
 	}
 }
