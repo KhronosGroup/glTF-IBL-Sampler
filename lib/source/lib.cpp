@@ -6,15 +6,18 @@
 #include "ktxImage.h"
 #include <algorithm>
 #include <stdio.h>
+#include <string>
+#include "Image.h"
+
 
 namespace IBLLib
 {
-	Result compileShader(vkHelper& _vulkan, const char* _path, const char* _entryPoint, VkShaderModule& _outModule, ShaderCompiler::Stage _stage)
+	Result compileShader(vkHelper& _vulkan, const std::string _path, const char* _entryPoint, VkShaderModule& _outModule, ShaderCompiler::Stage _stage)
 	{
 		std::vector<char>  glslBuffer;
 		std::vector<uint32_t> outSpvBlob;
 
-		if (readFile(_path, glslBuffer) == false)
+		if (readFile(_path.c_str(), glslBuffer) == false)
 		{
 			return Result::ShaderFileNotFound;
 		}
@@ -32,12 +35,12 @@ namespace IBLLib
 		return Result::Success;
 	}
 
-	Result uploadImage(vkHelper& _vulkan, const char* _inputPath, VkImage& _outImage)
+	Result uploadImage(vkHelper& _vulkan, const std::string  _inputPath, VkImage& _outImage)
 	{
 		_outImage = VK_NULL_HANDLE;
 		STBImage panorama;
 
-		if (panorama.loadHdr(_inputPath) != Result::Success)
+		if (panorama.loadHdr(_inputPath.c_str()) != Result::Success)
 		{
 			return Result::InputPanoramaFileNotFound;
 		}
@@ -93,13 +96,13 @@ namespace IBLLib
 		return Result::Success;
 	}
 
-	Result uploadKtxImage(vkHelper& _vulkan, const char* _inputPath, VkImage& _outImage, uint32_t _requestedMipLevels = 1)
+	Result uploadKtxImage(vkHelper& _vulkan, const std::string _inputPath, VkImage& _outImage, uint32_t _requestedMipLevels = 1)
 	{
 		_outImage = VK_NULL_HANDLE;
 		Result result = Result::Success;
 	
 		KtxImage ktxImage;
-		result = ktxImage.loadKtx2(_inputPath);
+		result = ktxImage.loadKtx2(_inputPath.c_str());
 		if (result != Success)
 		{
 			return Result::KtxError;
@@ -294,7 +297,7 @@ namespace IBLLib
 		return Result::Success;
 	}
 
-	Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const char* _outputPath, const VkImageLayout inputImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const std::string _outputPath, const VkImageLayout inputImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 	{
 		const VkImageCreateInfo* pInfo = _vulkan.getCreateInfo(_srcImage);
 		if (pInfo == nullptr)
@@ -437,7 +440,7 @@ namespace IBLLib
 				currentSideLength = currentSideLength >> 1;
 			}
 
-			res = ktxImage.save(_outputPath);
+			res = ktxImage.save(_outputPath.c_str());
 			if (res != Result::Success)
 			{
 				return res;
@@ -447,7 +450,7 @@ namespace IBLLib
 		return Result::Success;
 	}
 
-	Result download2DImage(vkHelper& _vulkan, const VkImage _srcImage, const char* _outputPath, const VkImageLayout inputImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	Result download2DImage(vkHelper& _vulkan, const VkImage _srcImage, const std::string _outputPath, const VkImageLayout inputImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 	{
 		const VkImageCreateInfo* pInfo = _vulkan.getCreateInfo(_srcImage);
 		if (pInfo == nullptr)
@@ -537,8 +540,8 @@ namespace IBLLib
 			}
 
 			// Compute channel count by dividing the pixel byte length through each channels byte length.
-            uint32_t channels = ux3d::slimktx2::SlimKTX2::getPixelSize(static_cast<ux3d::slimktx2::Format>(pInfo->format)) /
-            		ux3d::slimktx2::SlimKTX2::getTypeSize(static_cast<ux3d::slimktx2::Format>(pInfo->format));
+			uint32_t channels = ux3d::slimktx2::SlimKTX2::getPixelSize(static_cast<ux3d::slimktx2::Format>(pInfo->format)) /
+				ux3d::slimktx2::SlimKTX2::getTypeSize(static_cast<ux3d::slimktx2::Format>(pInfo->format));
 
 			// Copy the outputted image (format with 1, 2 or 4 channels) into a 3-channel image.
 			// This is kind of a hack (this function is currently only used to write the BRDF LUT to disk):
@@ -547,17 +550,42 @@ namespace IBLLib
 			// which makes is impossible to compare the outputted LUT with already
 			// existing LUT PNGs.
 			std::vector<uint8_t> imageDataThreeChannel(imageData.size() * (4 / channels), 0);
-			for (uint32_t x = 0; x < width; x++) {
-                for (uint32_t y = 0; y < height; y++) {
-                    for (uint32_t c = 0; c < std::min(channels, 3u); c++) {
-                        imageDataThreeChannel[3 * (x * width + y) + c] =
-                            imageData[channels * (x * width + y) + c];
-                    }
-                }
+			for (uint32_t x = 0; x < width; x++) 
+			{
+				for (uint32_t y = 0; y < height; y++) 
+				{
+					for (uint32_t c = 0; c < std::min(channels, 3u); c++) 
+					{
+						imageDataThreeChannel[3 * (x * width + y) + c] =
+							imageData[channels * (x * width + y) + c];
+					}
+				}
 			}
 
+			Image image(width, height, 3, 1, imageDataThreeChannel);
+
+			std::vector<uint8_t> imageDataChannelRG;
+			bool channelMask[3];
+			channelMask[0] = true;
+			channelMask[1] = true;
+			channelMask[2] = false;
+			image.applyChannelMask(channelMask, imageDataChannelRG);
+			
+			std::vector<uint8_t> imageDataChannelB;
+			channelMask[0] = false;
+			channelMask[1] = false;
+			channelMask[2] = true;
+			image.applyChannelMask(channelMask, imageDataChannelB);
+
             STBImage stb_image;
-            res = stb_image.savePng(_outputPath, width, height, 3, imageDataThreeChannel.data());
+			std::string pathGgx = removeFileExtension(_outputPath) + "_ggx.png";
+			std::string pathCharlie = removeFileExtension(_outputPath) + "_charlie.png";
+
+
+            res = stb_image.savePng(pathGgx.c_str(), width, height, 3, imageDataChannelRG.data());
+
+			res = stb_image.savePng(pathCharlie.c_str(), width, height, 3, imageDataChannelB.data());
+
 			if (res != Result::Success)
 			{
 				return res;

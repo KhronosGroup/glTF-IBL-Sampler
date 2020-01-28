@@ -1,6 +1,7 @@
 #pragma once
 #include "ResultType.h"
 #include <stddef.h>
+#include "Image.h"
 
 namespace IBLLib
 {
@@ -9,6 +10,8 @@ namespace IBLLib
 	public:
 		STBImage() = default;
 		~STBImage();
+
+		Result savePng(const char* _path, Image& _image);
 
 		Result saveHdr(const char* _path, int _width, int _height, int _channels, const void* data);
 		Result savePng(const char* _path, int _width, int _height, int _channels, const void* data);

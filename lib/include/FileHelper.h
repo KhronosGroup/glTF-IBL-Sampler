@@ -1,8 +1,11 @@
 #pragma once
 #include <vector>
+#include <string>
 
 namespace IBLLib
 {
+	std::string removeFileExtension(std::string _filePath);
+
 	bool readFile(const char* _path, std::vector<char>& _outBuffer);
 
 	bool writeFile(const char* _path, const char* _data, size_t _bytes);

@@ -1,6 +1,19 @@
 #include "FileHelper.h"
 #include <stdio.h>
 
+
+std::string IBLLib::removeFileExtension(const std::string _filePath)
+{
+	std::size_t position = _filePath.find_last_of(".");
+	if (position == std::string::npos)
+	{
+		return _filePath;
+	}
+
+	return _filePath.substr(0, position);
+
+}
+
 bool IBLLib::readFile(const char* _path, std::vector<char>& _outBuffer)
 {
 	FILE* file = fopen(_path, "rb");

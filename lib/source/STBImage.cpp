@@ -15,13 +15,24 @@ IBLLib::STBImage::~STBImage()
 	}
 }
 
+IBLLib::Result IBLLib::STBImage::savePng(const char* _path, Image& _image)
+{
+	return savePng(_path, 
+		_image.m_width,
+		_image.m_height,
+		_image.m_channels,
+		_image.m_imageData.data());
+}
+
 IBLLib::Result IBLLib::STBImage::saveHdr(const char* _path, int _width, int _height, int _channels, const void* data)
 {
+	printf("Save to  %s ", _path);
 	return stbi_write_hdr(_path, _width, _height, _channels, (const float* )data) == 0 ? StbError : Success;
 }
 
 IBLLib::Result IBLLib::STBImage::savePng(const char* _path, int _width, int _height, int _channels, const void* data)
 {	
+	printf("Save to  %s ", _path);
 	return stbi_write_png(_path, _width, _height, _channels, data, _width * _channels) == 0 ? StbError : Success;
 }
 
