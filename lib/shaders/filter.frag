@@ -142,7 +142,9 @@ float D_Charlie(float sheenRoughness, float NdotH)
 }
 
 vec3 getSampleVector(uint sampleIndex, vec3 N, float roughness)
-{
+{    
+	roughness = max(roughness, 0.000001); //clamp (0,1]
+
 	float X = float(sampleIndex) / float(pFilterParameters.sampleCount);
 	float Y = Hammersley(sampleIndex);
 
@@ -158,14 +160,17 @@ vec3 getSampleVector(uint sampleIndex, vec3 N, float roughness)
 	else if(pFilterParameters.distribution == cGGX)
 	{
 		float alpha = roughness * roughness;
-		cosTheta = sqrt((1.0 - Y) / (1.0 + (alpha*alpha - 1.0) * Y));
+		cosTheta = sqrt( (1.0 - Y) / (1.0 + (alpha*alpha - 1.0) * Y) );
 		sinTheta = sqrt(1.0 - cosTheta*cosTheta);		
 	}
 	else if(pFilterParameters.distribution == cCharlie)
-	{
+	{ 
+		// pdf = DistributionCharlie() * cosTheta
+		// problem if roughness==0
 		float alpha = roughness * roughness; // sqared ?
 		sinTheta = pow(Y, alpha / (2.0*alpha + 1.0));
 		cosTheta = sqrt(1.0 - sinTheta * sinTheta);
+		
 	}	
 	
 	return getImportanceSampleDirection(N, sinTheta, cosTheta, phi);
@@ -191,7 +196,8 @@ float PDF(vec3 V, vec3 H, vec3 N, vec3 L, float roughness)
 		// a = pFilterParameters.roughness * pFilterParameters.roughness
 		// D = ((1/a + 2) * sin(t)^(1/a)) / 2pi
 		float NdotH = dot(N, H);
-		return max(D_Charlie(roughness, NdotH) * NdotH, 0.0);
+		float D = D_Charlie(roughness, NdotH);
+		return max(D * NdotH, 0.0);
 	}
 	
 	return 0.f;
