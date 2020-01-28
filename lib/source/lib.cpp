@@ -450,7 +450,7 @@ namespace IBLLib
 		return Result::Success;
 	}
 
-	Result download2DImage(vkHelper& _vulkan, const VkImage _srcImage, const std::string _outputPath, const VkImageLayout inputImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	Result download2DImage(vkHelper& _vulkan, const VkImage _srcImage, const std::string _outputPath, const Distribution _distribution, const VkImageLayout inputImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 	{
 		const VkImageCreateInfo* pInfo = _vulkan.getCreateInfo(_srcImage);
 		if (pInfo == nullptr)
@@ -563,28 +563,27 @@ namespace IBLLib
 			}
 
 			Image image(width, height, 3, 1, imageDataThreeChannel);
+			STBImage stb_image;
 
-			std::vector<uint8_t> imageDataChannelRG;
-			bool channelMask[3];
-			channelMask[0] = true;
-			channelMask[1] = true;
-			channelMask[2] = false;
-			image.applyChannelMask(channelMask, imageDataChannelRG);
-			
-			std::vector<uint8_t> imageDataChannelB;
-			channelMask[0] = false;
-			channelMask[1] = false;
-			channelMask[2] = true;
-			image.applyChannelMask(channelMask, imageDataChannelB);
+			if (_distribution == GGX)
+			{
+				std::vector<uint8_t> imageDataChannelRG;
+				bool channelMask[3] = { true,true,false };
+				image.applyChannelMask(channelMask, imageDataChannelRG);
 
-            STBImage stb_image;
-			std::string pathGgx = removeFileExtension(_outputPath) + "_ggx.png";
-			std::string pathCharlie = removeFileExtension(_outputPath) + "_charlie.png";
+				std::string pathGgx = removeFileExtension(_outputPath) + "_ggx.png";
+				res = stb_image.savePng(pathGgx.c_str(), width, height, 3, imageDataChannelRG.data());
+			}
 
+			if(_distribution == Charlie)
+			{ 	
+				std::vector<uint8_t> imageDataChannelB;
+				bool channelMask[3] = {false,false,true};
+				image.applyChannelMask(channelMask, imageDataChannelB);
 
-            res = stb_image.savePng(pathGgx.c_str(), width, height, 3, imageDataChannelRG.data());
-
-			res = stb_image.savePng(pathCharlie.c_str(), width, height, 3, imageDataChannelB.data());
+				std::string pathCharlie = removeFileExtension(_outputPath) + "_charlie.png";
+				res = stb_image.savePng(pathCharlie.c_str(), width, height, 3, imageDataChannelB.data());
+			}
 
 			if (res != Result::Success)
 			{
@@ -1197,7 +1196,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 
 	if (generateLUT)
 	{
-		if (download2DImage(vulkan, outputLUT, _outputPathLUT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) != VK_SUCCESS)
+		if (download2DImage(vulkan, outputLUT, _outputPathLUT, _distribution, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) != VK_SUCCESS)
 		{
 			printf("Failed to download Image \n");
 			return Result::VulkanError;
