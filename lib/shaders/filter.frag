@@ -141,7 +141,7 @@ float D_Charlie(float sheenRoughness, float NdotH)
     return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * UX3D_MATH_PI);
 }
 
-vec3 getSampleVector(uint sampleIndex, vec3 N, float roughness)
+vec3 getSampleVector(uint sampleIndex, vec3 N, float roughness, uint distribution)
 {
 	float X = float(sampleIndex) / float(pFilterParameters.sampleCount);
 	float Y = Hammersley(sampleIndex);
@@ -150,18 +150,18 @@ vec3 getSampleVector(uint sampleIndex, vec3 N, float roughness)
     float cosTheta = 0.f;
 	float sinTheta = 0.f;
 
-	if(pFilterParameters.distribution == cLambertian)
+	if(distribution == cLambertian)
 	{
 		cosTheta = 1.0 - Y;
 		sinTheta = sqrt(1.0 - cosTheta*cosTheta);	
 	}
-	else if(pFilterParameters.distribution == cGGX)
+	else if(distribution == cGGX)
 	{
 		float alpha = roughness * roughness;
 		cosTheta = sqrt((1.0 - Y) / (1.0 + (alpha*alpha - 1.0) * Y));
 		sinTheta = sqrt(1.0 - cosTheta*cosTheta);		
 	}
-	else if(pFilterParameters.distribution == cCharlie)
+	else if(distribution == cCharlie)
 	{
 		float alpha = roughness * roughness; // sqared ?
 		sinTheta = pow(Y, alpha / (2.0*alpha + 1.0));
@@ -205,7 +205,7 @@ vec3 filterColor(vec3 N)
 	
 	for(uint i = 0; i < NumSamples; ++i)
 	{
-		vec3 H = getSampleVector(i, N, pFilterParameters.roughness);
+		vec3 H = getSampleVector(i, N, pFilterParameters.roughness, pFilterParameters.distribution);
 
 		// Note: reflect takes incident vector.
 		// Note: N = V
@@ -358,7 +358,7 @@ vec2 LUT_GGX(float NdotV, float roughness)
 	for(uint i = 0; i < pFilterParameters.sampleCount; ++i)
 	{
 		// Importance sampling, depending on the distribution.
-		vec3 H = getSampleVector(i, N, roughness);
+		vec3 H = getSampleVector(i, N, roughness, cGGX);
 		vec3 L = normalize(reflect(-V, H));
 
 		float NdotL = saturate(L.z);
