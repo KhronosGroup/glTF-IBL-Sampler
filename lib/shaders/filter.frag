@@ -94,17 +94,23 @@ vec3 getImportanceSampleDirection(vec3 normal, float sinTheta, float cosTheta, f
 	vec3 H = normalize(vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta));
     
     vec3 bitangent = vec3(0.0, 1.0, 0.0);
-
-    float NdotB = dot(normal, bitangent);
-
-    if (NdotB == 1.0)
-    {
-        bitangent = vec3(0.0, 0.0, -1.0);
-    }
-    else if (NdotB == -1.0)
-    {
-        bitangent = vec3(0.0, 0.0, 1.0);
-    }
+	
+	// Eliminates singularities.
+	float NdotX = dot(normal, vec3(1.0, 0.0, 0.0));
+	float NdotY = dot(normal, vec3(0.0, 1.0, 0.0));
+	float NdotZ = dot(normal, vec3(0.0, 0.0, 1.0));
+	if (abs(NdotY) > abs(NdotX) && abs(NdotY) > abs(NdotZ))
+	{
+		// Sampling +Y or -Y, so we need a more robust bitangent.
+		if (NdotY > 0.0)
+		{
+			bitangent = vec3(0.0, 0.0, 1.0);
+		}
+		else
+		{
+			bitangent = vec3(0.0, 0.0, -1.0);
+		}
+	}
 
     vec3 tangent = cross(bitangent, normal);
     bitangent = cross(normal, tangent);
