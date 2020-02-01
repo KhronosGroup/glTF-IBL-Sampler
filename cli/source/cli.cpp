@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 	unsigned int cubeMapResolution = 1024u;
 	OutputFormat targetFormat = R16G16B16A16_SFLOAT;
 	Distribution distribution = GGX;
-	float lodBias = 1.0f;
+	float lodBias = 0.0f;
 	bool inputIsCubeMap = false;
 	bool enableDebugOutput = false;
 
@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 		printf("-mipLevelCount: number of mip levels of specular cube map\n");
 		printf("-cubeMapResolution: resolution of output cube map (default = 1024)\n");
 		printf("-targetFormat: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT)  \n");
-		printf("-lodBias: level of detail bias applied to filtering (default = 1) \n");
+		printf("-lodBias: level of detail bias applied to filtering (default = 0) \n");
 		printf("-inputIsCubeMap: if set, a cube map in ktx1 format is expected at input path \n");
 
 		return 0;
