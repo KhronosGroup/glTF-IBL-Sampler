@@ -314,24 +314,17 @@ vec3 LUT(float NdotV, float roughness)
 				
 				float sheenDistribution = D_Charlie(roughness, NdotH);
 				float sheenVisibility = V_Neubelt(NdotL, NdotV);
-				float sheenBRDF = sheenDistribution * sheenVisibility;
-
-				sheenBRDF=1.0/(4*(VdotH));
-
-				float sheenPDF = PDF(V, H, N, L, roughness);
-				sheenPDF=1.0/(2*UX3D_MATH_PI);
-
-				float weightedBRDF = sheenBRDF/sheenPDF;
-
-				float Fc =0;
-				//acc.x += (1.0 - Fc) * weightedBRDF;
-				//acc.y += Fc * weightedBRDF;
 
 				A += 0;
 				B += 0;
-				C += weightedBRDF;
+				C += sheenVisibility * sheenDistribution * NdotL * VdotH;
 			}
 		}
+	}
+	
+	if (pFilterParameters.distribution == cCharlie)
+	{
+		C *= 2.0 * UX3D_MATH_PI;
 	}
 
 	// The PDF is simply pdf(v, h) -> NDF * <nh>.
