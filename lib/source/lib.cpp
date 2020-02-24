@@ -62,7 +62,8 @@ namespace IBLLib
 		}
 
 		// create the destination image we want to sample in the shader
-		if (_vulkan.createImage2DAndAllocate(_outImage, panorama.getWidth(), panorama.getHeight(), VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT) != VK_SUCCESS)
+		VkFormat panoramaFormat = panorama.getChannels() == 3 ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT;
+		if (_vulkan.createImage2DAndAllocate(_outImage, panorama.getWidth(), panorama.getHeight(), panoramaFormat, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT) != VK_SUCCESS)
 		{
 			return Result::VulkanError;
 		}
@@ -798,18 +799,6 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 	const VkFormat cubeMapFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 	const VkFormat LUTFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
-	const uint32_t cubeMapSideLength = _cubemapResolution;
-	const uint32_t outputMipLevels = _distribution == Lambertian ? 1u : _mipmapCount;
-	
-	uint32_t maxMipLevels = 0u;
-	for (uint32_t m = cubeMapSideLength; m > 0; m = m >> 1, ++maxMipLevels) {}
-
-	if ((_cubemapResolution >> (outputMipLevels - 1)) < 1)
-	{
-		printf("Error: CubemapResolution incompatible with MipmapCount\n");
-		return Result::InvalidArgument;
-	}
-
 	IBLLib::Result res = Result::Success;
 
 	vkHelper vulkan;
@@ -838,6 +827,22 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 	if ((res = compileShader(vulkan, IBLSAMPLER_SHADERS_DIR "/filter.frag", "filterCubeMap", filterCubeMapFragmentShader, ShaderCompiler::Stage::Fragment)) != Result::Success)
 	{
 		return res;
+	}
+
+	VkExtent3D panoramaExtent = vulkan.getCreateInfo(panoramaImage)->extent;
+	_cubemapResolution = _cubemapResolution != 0 ? _cubemapResolution : panoramaExtent.height;
+	_mipmapCount = _mipmapCount != 0 ? _mipmapCount : static_cast<uint32_t>(floor(log2(_cubemapResolution)));
+
+	const uint32_t cubeMapSideLength = _cubemapResolution;
+	const uint32_t outputMipLevels = _distribution == Distribution::Lambertian ? 1u : _mipmapCount;
+
+	uint32_t maxMipLevels = 0u;
+	for (uint32_t m = cubeMapSideLength; m > 0; m = m >> 1, ++maxMipLevels) {}
+
+	if ((_cubemapResolution >> (outputMipLevels - 1)) < 1)
+	{
+		printf("Error: CubemapResolution incompatible with MipmapCount\n");
+		return Result::InvalidArgument;
 	}
 	
 	VkSampler cubeMipMapSampler = VK_NULL_HANDLE;
@@ -968,7 +973,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		uint32_t mipLevel = 1u;
 		uint32_t width = 1024u;
 		float lodBias = 0.f;
-		Distribution distribution = Lambertian;
+		Distribution distribution = Distribution::Lambertian;
 	};
 
 	std::vector<VkPushConstantRange> ranges(1u);
@@ -1068,13 +1073,13 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 
 	switch (_distribution)
 	{
-	case IBLLib::Lambertian:
+	case IBLLib::Distribution::Lambertian:
 		printf("Filtering lambertian\n");
 		break;
-	case IBLLib::GGX:
+	case IBLLib::Distribution::GGX:
 		printf("Filtering GGX\n");
 		break;
-	case IBLLib::Charlie:
+	case IBLLib::Distribution::Charlie:
 		printf("Filtering Charlie\n");
 		break;
 	default:

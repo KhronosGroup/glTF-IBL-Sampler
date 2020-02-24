@@ -48,17 +48,18 @@ The glTF-IBL-Sampler consists of two projects: lib (shared library) and cli (exe
 The CLI takes an environment HDR image as input. The filtered specular and diffuse cube maps can be stored as KTX1 or KTX2 (with basis compression).
 
 * ```-inputPath```: path to panorama image (default) or cube map (if inputIsCubeMap flag ist set)
-* ```-specularOutput```: output path for specular term of filtered cube map
-* ```-diffuseOutput```: output path for diffuse term of filtered cube map
+* ```-outCubeMap```: output path for filtered cube map (default=outputCubeMap.ktx2)
+* ```-outLUT```: output path for BRDF LUT (default=outputLUT.png)
+* ```-distribution```: NDF to sample (Lambertian, GGX, Charlie)
 * ```-sampleCount```: number of samples used for filtering (default = 1024)
 * ```-mipLevelCount```: number of mip levels of specular cube map
-* ```-cubeMapResolution```: resolution of output cube map (default = 1024)
+* ```-cubeMapResolution```: resolution of output cube map.  If omitted, an optimal resolution is chosen based on the input panorama's resolution.
 * ```-targetFormat```: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT)
-* ```-lodBias```: level of detail bias applied to filtering (default = 1 )
-* ```-inputIsCubeMap```: if set, a cube map in ktx1 format is expected at input path 
+* ```-lodBias```: level of detail bias applied to filtering (default = 0)
+* ```-inputIsCubeMap```: if set, a cube map in ktx1 format is expected at input path
 
 Example
 
 ```
-.\cli.exe -inputPath ..\cubemap_in.hdr -inputIsCubeMap -specularOutput ..\..\specular_out.ktx2 -diffuseOutput ..\diffuse_out.ktx2 -sampleCount 1024 -mipLevelCount 5 -cubeMapResolution 1024 -targetFormat R16G16B16A16_SFLOAT
+.\cli.exe -inputPath ..\cubemap_in.hdr
 ```

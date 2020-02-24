@@ -570,7 +570,14 @@ VkResult IBLLib::vkHelper::executeCommandBuffers(const std::vector<VkCommandBuff
 
 		if ((res = vkQueueSubmit(m_queue, 1u, &submitInfo, fence)) != VK_SUCCESS)
 		{
-			printf("Failed to submit queue [%u]\n", res);
+			if (res == VK_ERROR_DEVICE_LOST)
+			{
+				printf("Failed to submit queue [VK_ERROR_DEVICE_LOST].  Prefiltering likely exceeded the TDRDelay.  Consider reducing the quality of sample, outputResolution, or mipLevels.\n");
+			}
+			else
+			{
+				printf("Failed to submit queue [%d].\n", res);
+			}
 			vkDestroyFence(m_logicalDevice, fence, nullptr);
 			return res;
 		}
