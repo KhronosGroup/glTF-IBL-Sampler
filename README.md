@@ -58,8 +58,14 @@ The CLI takes an environment HDR image as input. The filtered specular and diffu
 * ```-lodBias```: level of detail bias applied to filtering (default = 0)
 * ```-inputIsCubeMap```: if set, a cube map in ktx1 format is expected at input path
 
-Example
+## Example
 
+Generation of the specular environment is achieved by selecting the GGX distribution.
 ```
-.\cli.exe -inputPath ..\cubemap_in.hdr
+.\cli.exe -inputPath ..\cubemap_in.hdr -distribution GGX
+```
+Executing the cli a second time, but with Lambertian distribution will generate a diffuse cubemap.  Diffuse cubemap generation
+ignores mipmapLevelCount (only 1 level is generated). Typical cubeMapResolution used for prefiltered diffuse maps are between 32 and 128 px.
+```
+.\cli.exe -inputPath ..\cubemap_in.hdr -distribution Lambertian -cubeMapResolution 64
 ```
