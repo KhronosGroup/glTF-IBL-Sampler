@@ -11,6 +11,7 @@ layout(set = 0, binding = 1) uniform samplerCube uCubeMap;
 const uint cLambertian = 0;
 const uint cGGX = 1;
 const uint cCharlie = 2;
+const uint cThinfilm = 3;
 
 layout(push_constant) uniform FilterParameters {
   float roughness;
@@ -186,6 +187,12 @@ vec3 getSampleVector(uint sampleIndex, vec3 N, float roughness)
 		sinTheta = pow(Y, alpha / (2.0*alpha + 1.0));
 		cosTheta = sqrt(1.0 - sinTheta * sinTheta);
 	}	
+	else if(pFilterParameters.distribution == cThinfilm)
+	{
+		// Any value can go here.
+		sinTheta = UX3D_MATH_PI * 0.5;
+		cosTheta = sqrt(1.0 - sinTheta * sinTheta);
+	}	
 	
 	return getImportanceSampleDirection(N, sinTheta, cosTheta, phi);
 }
@@ -212,6 +219,10 @@ float PDF(vec3 V, vec3 H, vec3 N, vec3 L, float roughness)
 		
 		float D = D_Charlie(roughness, NdotH);
 		return max(D * NdotH / abs(4.0 * VdotH), 0.0);
+	}
+	else if(pFilterParameters.distribution == cThinfilm)
+	{
+		return 0.0;
 	}
 	
 	return 0.f;
@@ -334,6 +345,27 @@ vec3 LUT(float NdotV, float roughness)
 				A += 0;
 				B += 0;
 				C += sheenVisibility * sheenDistribution * NdotL * VdotH;
+			}
+
+			if (pFilterParameters.distribution == cThinfilm)
+			{
+				const float dOffset = 0.0;
+				const float dScale = 1200.0;
+
+				// Map back.
+				float x = NdotV;
+				float y = roughness;
+
+				// LUT for Thinfilm distribution.
+				float cosTheta = y / float(pFilterParameters.width - 1);
+				float d = x / float(pFilterParameters.width - 1);
+				d = d * dScale + dOffset;
+
+				// TODO:
+
+				A += 0;
+				B += 0;
+				C += 0;
 			}
 		}
 	}

@@ -1077,6 +1077,9 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 	case IBLLib::Charlie:
 		printf("Filtering Charlie\n");
 		break;
+	case IBLLib::Thinfilm:
+		printf("Filtering Thinfilm\n");
+		break;
 	default:
 		break;
 	}
@@ -1161,13 +1164,16 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		return Result::VulkanError;
 	}
 
-	if (downloadCubemap(vulkan, convertedCubeMap, _outputPathCubeMap, currentCubeMapImageLayout) != VK_SUCCESS)
+	if (_distribution != IBLLib::Thinfilm)
 	{
-		printf("Failed to download Image \n");
-		return Result::VulkanError;
+		if (downloadCubemap(vulkan, convertedCubeMap, _outputPathCubeMap, currentCubeMapImageLayout) != VK_SUCCESS)
+		{
+			printf("Failed to download Image \n");
+			return Result::VulkanError;
+		}
 	}
 
-	if (generateLUT && (_distribution == IBLLib::GGX || _distribution == IBLLib::Charlie))
+	if (generateLUT && (_distribution == IBLLib::GGX || _distribution == IBLLib::Charlie || _distribution == IBLLib::Thinfilm))
 	{
 		if (download2DImage(vulkan, outputLUT, _outputPathLUT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) != VK_SUCCESS)
 		{

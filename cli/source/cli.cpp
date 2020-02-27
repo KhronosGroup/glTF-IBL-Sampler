@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 		printf("-inputPath: path to panorama image (default) or cube map (if inputIsCubeMap flag ist set) \n");
 		printf("-outCubeMap: output path for filtered cube map\n");
 		printf("-outLUT output path for BRDF LUT\n");
-		printf("-distribution NDF to sample (Lambertian, GGX, Charlie)\n");
+		printf("-distribution NDF to sample (Lambertian, GGX, Charlie, Thinfilm)\n");
 		printf("-sampleCount: number of samples used for filtering (default = 1024)\n");
 		printf("-mipLevelCount: number of mip levels of specular cube map\n");
 		printf("-cubeMapResolution: resolution of output cube map (default = 1024)\n");
@@ -101,6 +101,10 @@ int main(int argc, char* argv[])
 			else if (strcmp(distributionString, "Charlie") == 0)
 			{
 				distribution = Charlie;
+			}
+			else if (strcmp(distributionString, "Thinfilm") == 0)
+			{
+				distribution = Thinfilm;
 			}
 		}
 		else if (strcmp(argv[i], "-lodBias") == 0)
