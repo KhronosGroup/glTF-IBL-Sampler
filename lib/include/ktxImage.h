@@ -15,7 +15,6 @@ namespace IBLLib
 		KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap);
 		~KtxImage();
 
-		uint8_t* getData() const;
 		IBLLib::Result loadKtx2(const char* _pFilePath);
 
 		Result writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, uint32_t _level);
@@ -26,7 +25,6 @@ namespace IBLLib
 		uint32_t getLevels() const { return m_slimKTX2.getHeader().levelCount; }
 		bool isCubeMap() const { return m_slimKTX2.getHeader().faceCount == 6u; }
 		VkFormat getFormat() const { return static_cast<VkFormat>(m_slimKTX2.getHeader().vkFormat); }
-		uint64_t getImageDataSize() const { return m_slimKTX2.getContainerSize(); }
 
 	private:
 		ux3d::slimktx2::SlimKTX2 m_slimKTX2;

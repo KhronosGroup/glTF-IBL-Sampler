@@ -95,118 +95,120 @@ namespace IBLLib
 
 	Result uploadKtxImage(vkHelper& _vulkan, const char* _inputPath, VkImage& _outImage, uint32_t _requestedMipLevels = 1)
 	{
-		_outImage = VK_NULL_HANDLE;
-		Result result = Result::Success;
+		return Result::KtxError; // NOT IMPLEMENTED
+
+		//_outImage = VK_NULL_HANDLE;
+		//Result result = Result::Success;
 	
-		KtxImage ktxImage;
-		result = ktxImage.loadKtx2(_inputPath);
-		if (result != Success)
-		{
-			return Result::KtxError;
-		}
+		//KtxImage ktxImage;
+		//result = ktxImage.loadKtx2(_inputPath);
+		//if (result != Success)
+		//{
+		//	return Result::KtxError;
+		//}
 	
-		const uint64_t dataByteSize = ktxImage.getImageDataSize();
-		const uint32_t width = ktxImage.getWidth();
-		const uint32_t height = ktxImage.getHeight();
-		const VkFormat vkFormat = ktxImage.getFormat();
-		const uint32_t formatSize = ux3d::slimktx2::SlimKTX2::getPixelSize(static_cast<ux3d::slimktx2::Format>(vkFormat));
-		
-		if(ktxImage.getLevels() > 1)
-		{
-			printf("Error: unexpected mip levels\n");
-			return InvalidArgument;
-		}
+		//const uint64_t dataByteSize = ktxImage.getImageDataSize();
+		//const uint32_t width = ktxImage.getWidth();
+		//const uint32_t height = ktxImage.getHeight();
+		//const VkFormat vkFormat = ktxImage.getFormat();
+		//const uint32_t formatSize = ux3d::slimktx2::SlimKTX2::getPixelSize(static_cast<ux3d::slimktx2::Format>(vkFormat));
+		//
+		//if(ktxImage.getLevels() > 1)
+		//{
+		//	printf("Error: unexpected mip levels\n");
+		//	return InvalidArgument;
+		//}
 
-		if(vkFormat == VK_FORMAT_UNDEFINED)
-		{
-			printf("Error: VkFormat of ktx file not supported\n");
-			return InvalidArgument;
-		}
+		//if(vkFormat == VK_FORMAT_UNDEFINED)
+		//{
+		//	printf("Error: VkFormat of ktx file not supported\n");
+		//	return InvalidArgument;
+		//}
 
-		if (ktxImage.isCubeMap() == false)
-		{
-			printf("Error: ktx file does not contain a cubemap\n");
-			return InvalidArgument;
-		}
+		//if (ktxImage.isCubeMap() == false)
+		//{
+		//	printf("Error: ktx file does not contain a cubemap\n");
+		//	return InvalidArgument;
+		//}
 
-		const uint8_t* data = ktxImage.getData();
-		
-		if(data == nullptr)
-		{
-			printf("Error: ktx data is nullptr\n");
-			return Result::KtxError;
-		}
+		//const uint8_t* data = ktxImage.getData();
+		//
+		//if(data == nullptr)
+		//{
+		//	printf("Error: ktx data is nullptr\n");
+		//	return Result::KtxError;
+		//}
 
-		printf("Uploading data to device\n");
+		//printf("Uploading data to device\n");
 
-		VkCommandBuffer uploadCmds = VK_NULL_HANDLE;
-		if (_vulkan.createCommandBuffer(uploadCmds) != VK_SUCCESS)
-		{
-			return Result::VulkanError;
-		}
+		//VkCommandBuffer uploadCmds = VK_NULL_HANDLE;
+		//if (_vulkan.createCommandBuffer(uploadCmds) != VK_SUCCESS)
+		//{
+		//	return Result::VulkanError;
+		//}
 
-		// create staging buffer for image data
-		VkBuffer stagingBuffer = VK_NULL_HANDLE;
-		if (_vulkan.createBufferAndAllocate(stagingBuffer, static_cast<uint32_t>(dataByteSize), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != VK_SUCCESS)
-		{
-			printf("Error: failed creating buffer\n");
-			return Result::VulkanError;
-		}
+		//// create staging buffer for image data
+		//VkBuffer stagingBuffer = VK_NULL_HANDLE;
+		//if (_vulkan.createBufferAndAllocate(stagingBuffer, static_cast<uint32_t>(dataByteSize), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != VK_SUCCESS)
+		//{
+		//	printf("Error: failed creating buffer\n");
+		//	return Result::VulkanError;
+		//}
 
-		// transfer data to the host coherent staging buffer 
-		if (_vulkan.writeBufferData(stagingBuffer, data, dataByteSize) != VK_SUCCESS)
-		{
-			printf("Error: failed writing to buffer\n");
-			return Result::VulkanError;
-		}
+		//// transfer data to the host coherent staging buffer 
+		//if (_vulkan.writeBufferData(stagingBuffer, data, dataByteSize) != VK_SUCCESS)
+		//{
+		//	printf("Error: failed writing to buffer\n");
+		//	return Result::VulkanError;
+		//}
 
-		if (_vulkan.createImage2DAndAllocate(_outImage, width, height, vkFormat,
-			VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-			_requestedMipLevels, 6u, VK_IMAGE_TILING_OPTIMAL, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_SHARING_MODE_EXCLUSIVE, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) != VK_SUCCESS)
-		{
-			return Result::VulkanError;
-		}
+		//if (_vulkan.createImage2DAndAllocate(_outImage, width, height, vkFormat,
+		//	VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		//	_requestedMipLevels, 6u, VK_IMAGE_TILING_OPTIMAL, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_SHARING_MODE_EXCLUSIVE, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) != VK_SUCCESS)
+		//{
+		//	return Result::VulkanError;
+		//}
 
-		if (_vulkan.beginCommandBuffer(uploadCmds, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) != VK_SUCCESS)
-		{
-			return Result::VulkanError;
-		}
+		//if (_vulkan.beginCommandBuffer(uploadCmds, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) != VK_SUCCESS)
+		//{
+		//	return Result::VulkanError;
+		//}
 
-		// transition to write dst layout
+		//// transition to write dst layout
 
-		VkImageSubresourceRange subresourceRange{};
-		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		subresourceRange.baseMipLevel = 0;
-		subresourceRange.levelCount = 1;
-		subresourceRange.layerCount = 6u;
+		//VkImageSubresourceRange subresourceRange{};
+		//subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		//subresourceRange.baseMipLevel = 0;
+		//subresourceRange.levelCount = 1;
+		//subresourceRange.layerCount = 6u;
 
-		_vulkan.imageBarrier(uploadCmds, _outImage,
-			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0u,//src stage, access
-			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,//dst stage, access
-			subresourceRange);
-		
-		_vulkan.copyBufferToBasicImage2D(uploadCmds, stagingBuffer, _outImage);
+		//_vulkan.imageBarrier(uploadCmds, _outImage,
+		//	VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		//	VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0u,//src stage, access
+		//	VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,//dst stage, access
+		//	subresourceRange);
+		//
+		//_vulkan.copyBufferToBasicImage2D(uploadCmds, stagingBuffer, _outImage);
 
-		_vulkan.imageBarrier(uploadCmds, _outImage,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,//src stage, access
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,//dst stage, access
-			subresourceRange);
+		//_vulkan.imageBarrier(uploadCmds, _outImage,
+		//	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		//	VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,//src stage, access
+		//	VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,//dst stage, access
+		//	subresourceRange);
 
 
-		if (_vulkan.endCommandBuffer(uploadCmds) != VK_SUCCESS)
-		{
-			return Result::VulkanError;
-		}
+		//if (_vulkan.endCommandBuffer(uploadCmds) != VK_SUCCESS)
+		//{
+		//	return Result::VulkanError;
+		//}
 
-		if (_vulkan.executeCommandBuffer(uploadCmds) != VK_SUCCESS)
-		{
-			return Result::VulkanError;
-		}
+		//if (_vulkan.executeCommandBuffer(uploadCmds) != VK_SUCCESS)
+		//{
+		//	return Result::VulkanError;
+		//}
 
-		_vulkan.destroyBuffer(stagingBuffer);
-		_vulkan.destroyCommandBuffer(uploadCmds);
+		//_vulkan.destroyBuffer(stagingBuffer);
+		//_vulkan.destroyCommandBuffer(uploadCmds);
 
 		return Result::Success;
 	}

@@ -17,11 +17,6 @@ IBLLib::KtxImage::KtxImage()
 	m_slimKTX2.setCallbacks(callbacks);
 }
 
-uint8_t* IBLLib::KtxImage::getData() const
-{
-	return m_slimKTX2.getContainerPointer();
-}
-
 IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
 {
 	FILE* pFile = fopen(_pFilePath, "rb");
@@ -55,7 +50,7 @@ IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat
 	
 	m_slimKTX2.setCallbacks(callbacks);
 	m_slimKTX2.specifyFormat(static_cast<ux3d::slimktx2::Format>(_vkFormat), _width, _height, _levels, _isCubeMap ? 6u : 1u, 0u, 0u);
-	m_slimKTX2.allocateContainer();
+	m_slimKTX2.allocateMipLevelArray();
 }
 
 IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, uint32_t _level)
@@ -71,6 +66,7 @@ IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<uint8_t>& _inData, 
 IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 {	
 	FILE* pFile = fopen(_pathOut, "wb");
+	//FILE* pFile = fopen(_pathOut, "r+");
 
 	if (pFile == NULL)
 	{
