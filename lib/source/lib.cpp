@@ -1069,7 +1069,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 	switch (_distribution)
 	{
 	case IBLLib::Lambertian:
-		printf("Filtering lambertian\n");
+		printf("Filtering Lambertian\n");
 		break;
 	case IBLLib::GGX:
 		printf("Filtering GGX\n");
@@ -1167,7 +1167,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		return Result::VulkanError;
 	}
 
-	if (generateLUT)
+	if (generateLUT && (_distribution == IBLLib::GGX || _distribution == IBLLib::Charlie))
 	{
 		if (download2DImage(vulkan, outputLUT, _outputPathLUT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) != VK_SUCCESS)
 		{
