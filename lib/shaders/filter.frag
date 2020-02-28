@@ -4,6 +4,30 @@
 #define UX3D_MATH_PI 3.1415926535897932384626433832795
 #define UX3D_MATH_INV_PI (1.0 / UX3D_MATH_PI)
 
+#define UX3D_MATH_E 2.718281828459
+
+#define UX3D_GAMMA 2.2
+#define UX3D_INV_GAMMA (1.0 / UX3D_GAMMA)
+
+// Air
+#define UX3D_N0	1.0
+// Dielectric										
+#define UX3D_R1	0.04									
+// Research by "infinity ward"
+#define UX3D_K	0.5										
+// Max
+#define UX3D_N3	4.0
+// derived from r1 = ((n1 - n0) / (n1 + n0))^2
+#define UX3D_N1	1.5
+// derived from k = r1 / r2
+#define UX3D_R2	0.08
+// derived from r2 = ((n2 - n0) / (n2 + n0))^2
+#define UX3D_N2	((10.0 * sqrt(2.0) + 27.0) / 23.0)
+
+#define UX3D_IRIDESCENCE_OFFSET		0.0
+#define UX3D_IRIDESCENCE_SCALE		1200.0
+
+
 layout(set = 0, binding = 0) uniform sampler2D uPanorama;
 layout(set = 0, binding = 1) uniform samplerCube uCubeMap;
 
@@ -33,6 +57,21 @@ layout(location = 4) out vec4 outFace4;
 layout(location = 5) out vec4 outFace5;
 
 layout(location = 6) out vec3 outLUT;
+
+float sqr(float a)
+{
+	return a*a;
+}
+
+vec3 LINEARtoSRGB(vec3 color)
+{
+    return pow(color, vec3(UX3D_INV_GAMMA));
+}
+
+vec3 SRGBtoLINEAR(vec3 srgbIn)
+{
+    return vec3(pow(srgbIn.xyz, vec3(UX3D_GAMMA)));
+}
 
 void writeFace(int face, vec3 colorIn)
 {
@@ -117,6 +156,11 @@ vec3 getImportanceSampleDirection(vec3 normal, float sinTheta, float cosTheta, f
     bitangent = cross(normal, tangent);
     
 	return normalize(tangent * H.x + bitangent * H.y + normal * H.z);
+}
+
+float F_Schlick(float f0, float cosTheta)
+{
+    return f0 + (1.0 - f0) * pow(1.0 - cosTheta, 5.0);
 }
 
 // https://github.com/google/filament/blob/master/shaders/src/brdf.fs#L136
@@ -346,27 +390,6 @@ vec3 LUT(float NdotV, float roughness)
 				B += 0;
 				C += sheenVisibility * sheenDistribution * NdotL * VdotH;
 			}
-
-			if (pFilterParameters.distribution == cThinfilm)
-			{
-				const float dOffset = 0.0;
-				const float dScale = 1200.0;
-
-				// Map back.
-				float x = NdotV;
-				float y = roughness;
-
-				// LUT for Thinfilm distribution.
-				float cosTheta = y / float(pFilterParameters.width - 1);
-				float d = x / float(pFilterParameters.width - 1);
-				d = d * dScale + dOffset;
-
-				// TODO:
-
-				A += 0;
-				B += 0;
-				C += 0;
-			}
 		}
 	}
 
@@ -374,6 +397,164 @@ vec3 LUT(float NdotV, float roughness)
 	// To parametrize the PDF over l, use the Jacobian transform, yielding to: pdf(v, l) -> NDF * <nh> / 4<vh>
 	// Since the BRDF divide through the PDF to be normalized, the 4 can be pulled out of the integral.
 	return vec3(4.0 * A, 4.0 * B, 4.0 * 2.0 * UX3D_MATH_PI * C) / pFilterParameters.sampleCount;
+}
+
+// see https://en.wikipedia.org/wiki/Fresnel_equations
+float fresnelRs(float n1, float n2, float cosThetaIncidence)
+{
+	float sinThetaIncidence = sqrt(1.0 - cosThetaIncidence * cosThetaIncidence);
+
+	float sinThetaTransmittance = n1 * (sinThetaIncidence / n2);
+	float cosThetaTransmittance = sqrt(1.0 - sinThetaTransmittance * sinThetaTransmittance);
+
+	float n2CosThetaTransmittance = n2 * cosThetaTransmittance;
+	float n1CosThetaIncidence = n1 * cosThetaIncidence;
+
+	float sPolarizedSqrt = (n1CosThetaIncidence - n2CosThetaTransmittance) / (n1CosThetaIncidence + n2CosThetaTransmittance);
+
+	return sPolarizedSqrt * sPolarizedSqrt;
+}
+
+float fresnelRp(float n1, float n2, float cosThetaIncidence)
+{
+	float sinThetaIncidence = sqrt(1.0 - cosThetaIncidence * cosThetaIncidence);
+
+	float sinThetaTransmittance = n1 * (sinThetaIncidence / n2);
+	float cosThetaTransmittance = sqrt(1.0 - sinThetaTransmittance * sinThetaTransmittance);
+
+	float n1CosThetaTransmittance = n1 * cosThetaTransmittance;
+	float n2CosThetaIncidence = n2 * cosThetaIncidence;
+
+	float pPolarizedSqrt = (n2CosThetaIncidence - n1CosThetaTransmittance) / (n2CosThetaIncidence + n1CosThetaTransmittance);
+
+	return pPolarizedSqrt * pPolarizedSqrt;
+}
+
+float thinFilm(float lambda, float d, float cosThetaIncidence, float n1, float n2)
+{
+	float n0 = 1.0;	// Air
+
+	float s01 = fresnelRs(n0, n1, cosThetaIncidence);
+	float s12 = fresnelRs(n1, n2, cosThetaIncidence);
+
+	float p01 = fresnelRp(n0, n1, cosThetaIncidence);
+	float p12 = fresnelRp(n1, n2, cosThetaIncidence);
+
+	//
+
+	float sinThetaIncidence = sqrt(1.0 - cosThetaIncidence * cosThetaIncidence);
+
+	float sinThetaTransmittance = n1 * (sinThetaIncidence / n2);
+	float cosThetaTransmittance = sqrt(1.0 - sinThetaTransmittance * sinThetaTransmittance);
+
+	//
+
+	float cosDelta = cos(4.0 * UX3D_MATH_PI * cosThetaTransmittance * n1 * d / lambda);
+
+	//
+
+	float Fs = (sqr(s01) + sqr(s12) + 2.0 * s01 * s12 * cosDelta) / (1.0 + sqr(s01 * s12) + 2.0 * s01 * s12 * cosDelta);
+	float Fp = (sqr(p01) + sqr(p12) + 2.0 * p01 * p12 * cosDelta) / (1.0 + sqr(p01 * p12) + 2.0 * p01 * p12 * cosDelta);
+
+	return (Fs + Fp) * 0.5;
+}
+
+vec3 colorMatchingFunctionXYZ(float lambda)
+{
+	if (lambda < 380.0 || lambda > 780.0)
+	{
+		return vec3(0.0, 0.0, 0.0);
+	}
+
+	//
+
+	float cie_colour_match[81][3] = {
+	        {0.0014,0.0000,0.0065}, {0.0022,0.0001,0.0105}, {0.0042,0.0001,0.0201},
+	        {0.0076,0.0002,0.0362}, {0.0143,0.0004,0.0679}, {0.0232,0.0006,0.1102},
+	        {0.0435,0.0012,0.2074}, {0.0776,0.0022,0.3713}, {0.1344,0.0040,0.6456},
+	        {0.2148,0.0073,1.0391}, {0.2839,0.0116,1.3856}, {0.3285,0.0168,1.6230},
+	        {0.3483,0.0230,1.7471}, {0.3481,0.0298,1.7826}, {0.3362,0.0380,1.7721},
+	        {0.3187,0.0480,1.7441}, {0.2908,0.0600,1.6692}, {0.2511,0.0739,1.5281},
+	        {0.1954,0.0910,1.2876}, {0.1421,0.1126,1.0419}, {0.0956,0.1390,0.8130},
+	        {0.0580,0.1693,0.6162}, {0.0320,0.2080,0.4652}, {0.0147,0.2586,0.3533},
+	        {0.0049,0.3230,0.2720}, {0.0024,0.4073,0.2123}, {0.0093,0.5030,0.1582},
+	        {0.0291,0.6082,0.1117}, {0.0633,0.7100,0.0782}, {0.1096,0.7932,0.0573},
+	        {0.1655,0.8620,0.0422}, {0.2257,0.9149,0.0298}, {0.2904,0.9540,0.0203},
+	        {0.3597,0.9803,0.0134}, {0.4334,0.9950,0.0087}, {0.5121,1.0000,0.0057},
+	        {0.5945,0.9950,0.0039}, {0.6784,0.9786,0.0027}, {0.7621,0.9520,0.0021},
+	        {0.8425,0.9154,0.0018}, {0.9163,0.8700,0.0017}, {0.9786,0.8163,0.0014},
+	        {1.0263,0.7570,0.0011}, {1.0567,0.6949,0.0010}, {1.0622,0.6310,0.0008},
+	        {1.0456,0.5668,0.0006}, {1.0026,0.5030,0.0003}, {0.9384,0.4412,0.0002},
+	        {0.8544,0.3810,0.0002}, {0.7514,0.3210,0.0001}, {0.6424,0.2650,0.0000},
+	        {0.5419,0.2170,0.0000}, {0.4479,0.1750,0.0000}, {0.3608,0.1382,0.0000},
+	        {0.2835,0.1070,0.0000}, {0.2187,0.0816,0.0000}, {0.1649,0.0610,0.0000},
+	        {0.1212,0.0446,0.0000}, {0.0874,0.0320,0.0000}, {0.0636,0.0232,0.0000},
+	        {0.0468,0.0170,0.0000}, {0.0329,0.0119,0.0000}, {0.0227,0.0082,0.0000},
+	        {0.0158,0.0057,0.0000}, {0.0114,0.0041,0.0000}, {0.0081,0.0029,0.0000},
+	        {0.0058,0.0021,0.0000}, {0.0041,0.0015,0.0000}, {0.0029,0.0010,0.0000},
+	        {0.0020,0.0007,0.0000}, {0.0014,0.0005,0.0000}, {0.0010,0.0004,0.0000},
+	        {0.0007,0.0002,0.0000}, {0.0005,0.0002,0.0000}, {0.0003,0.0001,0.0000},
+	        {0.0002,0.0001,0.0000}, {0.0002,0.0001,0.0000}, {0.0001,0.0000,0.0000},
+			{0.0001,0.0000,0.0000}, {0.0001,0.0000,0.0000}, {0.0000,0.0000,0.0000}
+	};
+
+	uint index = uint((lambda - 380.0) / 5.0);
+
+	return vec3(cie_colour_match[index][0], cie_colour_match[index][1], cie_colour_match[index][2]);
+}
+
+// see https://en.wikipedia.org/wiki/Standard_illuminant Illuminant A
+// see https://www.fourmilab.ch/documents/specrend/
+float spectralRadiance(float lambda, float T)
+{
+	if (lambda < 380.0 || lambda > 780.0)
+	{
+		return 0.0;
+	}
+
+	//
+
+	float wavelength = lambda * 0.000000001; // To meters
+
+	float c1 = 3.74183e-16;
+	float c2 = 0.014388;
+
+	return (c1 * pow(wavelength, -5.0)) / (pow(UX3D_MATH_E, c2 / (wavelength * T)) - 1.0);
+}
+
+// see http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
+vec3 xyzToRGB(vec3 xyzC)
+{
+	// CIE RGB
+	mat3 matrix = mat3(2.3706743, -0.5138850, 0.0052982, -0.9000405, 1.4253036, -0.0146949, -0.4706338, 0.0885814, 1.0093968);
+
+	return matrix * xyzC;
+}
+
+vec3 thinFilmRGB(float d, float cosTheta, float n1, float n2)
+{
+	vec3 xyz = vec3(0.0, 0.0, 0.0);
+
+	// Spectral range 
+
+	for (float lambda = 380.0; lambda <= 780.0; lambda += 5.0)
+	{
+		xyz += spectralRadiance(lambda, 5500.0) * colorMatchingFunctionXYZ(lambda) * thinFilm(lambda, d, cosTheta, n1, n2);
+	}
+
+	xyz /= (xyz.r + xyz.g + xyz.b);
+
+	return LINEARtoSRGB(xyzToRGB(xyz));
+}
+
+vec3 LUTthinfilm(float x, float y)
+{
+	// LUT for Thinfilm distribution.
+	float d = x;
+	float cosTheta = y;
+	d = d * UX3D_IRIDESCENCE_SCALE + UX3D_IRIDESCENCE_OFFSET;
+
+	return thinFilmRGB(d, cosTheta, UX3D_N1, UX3D_N3);// - vec3(F_Schlick(UX3D_K, cosTheta));
 }
 
 // entry point
@@ -417,8 +598,13 @@ void filterCubeMap()
 	// y-coordinate: roughness
 	if (pFilterParameters.currentMipLevel == 0)
 	{
-		
-		outLUT = LUT(inUV.x, inUV.y);
-	
+		if (pFilterParameters.distribution != cThinfilm)
+		{
+			outLUT = LUT(inUV.x, inUV.y);
+		}
+		else
+		{
+			outLUT = LUTthinfilm(inUV.x, inUV.y);
+		}
 	}
 }
