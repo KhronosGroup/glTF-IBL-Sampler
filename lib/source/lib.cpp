@@ -307,7 +307,7 @@ namespace IBLLib
 		Result res = Success;
 
 		const VkFormat cubeMapFormat = pInfo->format; 
-		const uint32_t cubeMapFormatByteSize = ux3d::slimktx2::SlimKTX2::getPixelSize(static_cast<ux3d::slimktx2::Format>(cubeMapFormat));
+		const uint32_t cubeMapFormatByteSize = ux3d::slimktx2::getPixelSize(static_cast<ux3d::slimktx2::Format>(cubeMapFormat));
 		const uint32_t cubeMapSideLength = pInfo->extent.width;
 		const uint32_t mipLevels = pInfo->mipLevels;
 
@@ -460,7 +460,7 @@ namespace IBLLib
 		Result res = Success;
 
 		const VkFormat format = pInfo->format;
-		const uint32_t formatByteSize = ux3d::slimktx2::SlimKTX2::getPixelSize(static_cast<ux3d::slimktx2::Format>(format));
+		const uint32_t formatByteSize = ux3d::slimktx2::getPixelSize(static_cast<ux3d::slimktx2::Format>(format));
 		const uint32_t width = pInfo->extent.width;
 		const uint32_t height = pInfo->extent.width;
 		const size_t imageByteSize = width * height * formatByteSize;
@@ -539,8 +539,7 @@ namespace IBLLib
 			}
 
 			// Compute channel count by dividing the pixel byte length through each channels byte length.
-            uint32_t channels = ux3d::slimktx2::SlimKTX2::getPixelSize(static_cast<ux3d::slimktx2::Format>(pInfo->format)) /
-            		ux3d::slimktx2::SlimKTX2::getTypeSize(static_cast<ux3d::slimktx2::Format>(pInfo->format));
+			const uint32_t channels = ux3d::slimktx2::getChannelCount(static_cast<ux3d::slimktx2::Format>(pInfo->format));
 
 			// Copy the outputted image (format with 1, 2 or 4 channels) into a 3-channel image.
 			// This is kind of a hack (this function is currently only used to write the BRDF LUT to disk):
