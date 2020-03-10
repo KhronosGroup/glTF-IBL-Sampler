@@ -8,7 +8,7 @@ IBLLib::KtxImage::KtxImage()
 	ux3d::slimktx2::Callbacks callbacks{};
 
 	callbacks.allocate = allocate;
-	callbacks.free = deallocate;
+	callbacks.deallocate = deallocate;
 	callbacks.write = writeToFile;
 	callbacks.read = readFromFile;
 	callbacks.tell = tell;
@@ -42,7 +42,7 @@ IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat
 	ux3d::slimktx2::Callbacks callbacks{};
 
 	callbacks.allocate = allocate;
-	callbacks.free = deallocate;
+	callbacks.deallocate = deallocate;
 	callbacks.write = writeToFile;
 	callbacks.read = readFromFile;
 	callbacks.tell = tell;
