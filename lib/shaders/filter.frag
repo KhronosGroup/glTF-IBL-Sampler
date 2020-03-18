@@ -31,7 +31,7 @@ layout(location = 3) out vec4 outFace3;
 layout(location = 4) out vec4 outFace4;
 layout(location = 5) out vec4 outFace5;
 
-layout(location = 6) out vec2 outLUT;
+layout(location = 6) out vec3 outLUT;
 
 void writeFace(int face, vec3 colorIn)
 {
@@ -119,9 +119,9 @@ vec3 getImportanceSampleDirection(vec3 normal, float sinTheta, float cosTheta, f
 }
 
 // https://github.com/google/filament/blob/master/shaders/src/brdf.fs#L136
-float V_Neubelt(float NdotL, float NdotV)
+float V_Ashikhmin(float NdotL, float NdotV)
 {
-    return clamp(1.0 / (4.0 * (NdotL + NdotV - NdotL * NdotV)),0.0,1.0);
+    return clamp(1.0 / (4.0 * (NdotL + NdotV - NdotL * NdotV)), 0.0, 1.0);
 }
 
 // NDF
@@ -134,6 +134,19 @@ float D_GGX(float NdotH, float roughness)
     float divisor = NdotH * NdotH * (alpha2 - 1.0) + 1.0;
         
     return alpha2 / (UX3D_MATH_PI * divisor * divisor); 
+}
+
+// NDF
+float D_Ashikhmin(float NdotH, float roughness)
+{
+	float alpha = roughness * roughness;
+    // Ashikhmin 2007, "Distribution-based BRDFs"
+	float a2 = alpha * alpha;
+	float cos2h = NdotH * NdotH;
+	float sin2h = 1.0 - cos2h;
+	float sin4h = sin2h * sin2h;
+	float cot2 = -cos2h / (a2 * sin2h);
+	return 1.0 / (UX3D_MATH_PI * (4.0 * a2 + 1.0) * sin4h) * (4.0 * exp(cot2) + sin4h);
 }
 
 // NDF
@@ -169,7 +182,7 @@ vec3 getSampleVector(uint sampleIndex, vec3 N, float roughness)
 	}
 	else if(pFilterParameters.distribution == cCharlie)
 	{
-		float alpha = roughness * roughness; // sqared ?
+		float alpha = roughness * roughness;
 		sinTheta = pow(Y, alpha / (2.0*alpha + 1.0));
 		cosTheta = sqrt(1.0 - sinTheta * sinTheta);
 	}	
@@ -181,23 +194,24 @@ float PDF(vec3 V, vec3 H, vec3 N, vec3 L, float roughness)
 {
 	if(pFilterParameters.distribution == cLambertian)
 	{
-		float NdotL = dot(N, L); // NdotH ?
+		float NdotL = dot(N, L);
 		return max(NdotL * UX3D_MATH_INV_PI, 0.0);
 	}
 	else if(pFilterParameters.distribution == cGGX)
 	{
-		float VdotH = dot(V, H); // if V = N then VdotH = NdotH and D * NdotH / (4.0 * VdotH) = D / 4.0 (which seems weird)
+		float VdotH = dot(V, H);
 		float NdotH = dot(N, H);
 	
 		float D = D_GGX(NdotH, roughness);
-		return max(D * NdotH / (4.0 * VdotH), 0.0); // todo: try to derive '... / 4 VoH'
+		return max(D * NdotH / (4.0 * VdotH), 0.0);
 	}
 	else if(pFilterParameters.distribution == cCharlie)
 	{
-		// a = pFilterParameters.roughness * pFilterParameters.roughness
-		// D = ((1/a + 2) * sin(t)^(1/a)) / 2pi
+		float VdotH = dot(V, H);
 		float NdotH = dot(N, H);
-		return max(D_Charlie(roughness, NdotH) * NdotH, 0.0);
+		
+		float D = D_Charlie(roughness, NdotH);
+		return max(D * NdotH / abs(4.0 * VdotH), 0.0);
 	}
 	
 	return 0.f;
@@ -268,7 +282,7 @@ float V_SmithGGXCorrelated(float NoV, float NoL, float roughness) {
 
 // Compute LUT for GGX distribution.
 // See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
-vec2 LUT(float NdotV, float roughness)
+vec3 LUT(float NdotV, float roughness)
 {
 	// Compute spherical view vector: (sin(phi), 0, cos(phi))
 	vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV);
@@ -283,6 +297,7 @@ vec2 LUT(float NdotV, float roughness)
 	// NoL and roughness, so they are both numerically integrated and written into two channels.
 	float A = 0;
 	float B = 0;
+	float C = 0;
 
 	for(uint i = 0; i < pFilterParameters.sampleCount; ++i)
 	{
@@ -306,42 +321,27 @@ vec2 LUT(float NdotV, float roughness)
 				float Fc = pow(1.0 - VdotH, 5.0);
 				A += (1.0 - Fc) * V_pdf;
 				B += Fc * V_pdf;
+				C += 0;
 			}
 
 			if (pFilterParameters.distribution == cCharlie)
 			{
 				// LUT for Charlie distribution.
-
-				//TODO Begin
-
+				
 				float sheenDistribution = D_Charlie(roughness, NdotH);
-				float sheenVisibility = V_Neubelt(NdotL, NdotV);
-				float sheenBRDF = sheenDistribution * sheenVisibility;
+				float sheenVisibility = V_Ashikhmin(NdotL, NdotV);
 
-				sheenBRDF=1.0/(4*(VdotH));
-
-				float sheenPDF = PDF(V, H, N, L, roughness);
-				sheenPDF=1.0/(2*UX3D_MATH_PI);
-
-				float weightedBRDF = sheenBRDF/sheenPDF;
-
-				float Fc =0;
-				//acc.x += (1.0 - Fc) * weightedBRDF;
-				//acc.y += Fc * weightedBRDF;
-
-				A += weightedBRDF;
+				A += 0;
 				B += 0;
-				//TODO End
+				C += sheenVisibility * sheenDistribution * NdotL * VdotH;
 			}
 		}
 	}
 
-	// TODO: Doc, why scale by 4?
-
 	// The PDF is simply pdf(v, h) -> NDF * <nh>.
 	// To parametrize the PDF over l, use the Jacobian transform, yielding to: pdf(v, l) -> NDF * <nh> / 4<vh>
 	// Since the BRDF divide through the PDF to be normalized, the 4 can be pulled out of the integral.
-	return 4 * vec2(A, B) / pFilterParameters.sampleCount;
+	return vec3(4.0 * A, 4.0 * B, 4.0 * 2.0 * UX3D_MATH_PI * C) / pFilterParameters.sampleCount;
 }
 
 // entry point
