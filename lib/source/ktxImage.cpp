@@ -60,7 +60,6 @@ IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<uint8_t>& _inData, 
 IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 {	
 	FILE* pFile = fopen(_pathOut, "wb");
-	//FILE* pFile = fopen(_pathOut, "r+");
 
 	if (pFile == NULL)
 	{
