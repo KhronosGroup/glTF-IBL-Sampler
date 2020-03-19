@@ -16,7 +16,6 @@ int main(int argc, char* argv[])
 	OutputFormat targetFormat = R16G16B16A16_SFLOAT;
 	Distribution distribution = GGX;
 	float lodBias = 0.0f;
-	bool inputIsCubeMap = false;
 	bool enableDebugOutput = false;
 
 	const char* targetFormatString = "R16G16B16A16_SFLOAT";
@@ -37,7 +36,7 @@ int main(int argc, char* argv[])
 		printf("-cubeMapResolution: resolution of output cube map (default = 1024)\n");
 		printf("-targetFormat: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT)  \n");
 		printf("-lodBias: level of detail bias applied to filtering (default = 0) \n");
-		printf("-inputIsCubeMap: if set, a cube map in ktx1 format is expected at input path \n");
+
 
 		return 0;
 	}
@@ -107,10 +106,6 @@ int main(int argc, char* argv[])
 		{
 			lodBias = atof(nextArg);
 		}
-		else if (strcmp(argv[i], "-inputIsCubeMap") == 0)
-		{
-			inputIsCubeMap = true;
-		}
 		else if (strcmp(argv[i], "-debug") == 0)
 		{
 			enableDebugOutput = true;
@@ -151,10 +146,9 @@ int main(int argc, char* argv[])
 	printf("targetFormat set to %s\n", targetFormatString);
 	printf("distribution set to %s\n", distributionString);
 	printf("lodBias set to %f \n", lodBias);
-	printf("inputIsCubeMap flag is set to %s\n", inputIsCubeMap ? "True" : "False");
 	printf("debug flag is set to %s\n", enableDebugOutput ? "True" : "False");
 
-	Result res = sample(pathIn, pathOutCubeMap, pathOutLUT, distribution, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, inputIsCubeMap, enableDebugOutput);
+	Result res = sample(pathIn, pathOutCubeMap, pathOutLUT, distribution, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, enableDebugOutput);
 
 	if (res != Result::Success)
 	{

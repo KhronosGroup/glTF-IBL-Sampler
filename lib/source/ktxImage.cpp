@@ -1,25 +1,17 @@
 #include "ktxImage.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
+
+#include "DefaultAllocationCallback.h"
+#include "DefaultConsoleLogCallback.h"
+#include "DefaultFileIOCallback.h"
 
 IBLLib::KtxImage::KtxImage()
 {
-	ux3d::slimktx2::Callbacks callbacks{};
-
-	callbacks.allocate = allocate;
-	callbacks.free = deallocate;
-	callbacks.write = writeToFile;
-	callbacks.read = readFromFile;
-	callbacks.tell = tell;
-	callbacks.log = log;
+	ux3d::slimktx2::Callbacks callbacks = 
+		ux3d::slimktx2::DefaultAllocationCallback() |
+		ux3d::slimktx2::DefaultConsoleLogCallback() |
+		ux3d::slimktx2::DefaultFileIOCallback();
 
 	m_slimKTX2.setCallbacks(callbacks);
-}
-
-uint8_t* IBLLib::KtxImage::getData() const
-{
-	return m_slimKTX2.getContainerPointer();
 }
 
 IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
@@ -44,18 +36,15 @@ IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
 
 IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap)
 {
-	ux3d::slimktx2::Callbacks callbacks{};
+	ux3d::slimktx2::Callbacks callbacks =
+		ux3d::slimktx2::DefaultAllocationCallback() |
+		ux3d::slimktx2::DefaultConsoleLogCallback() |
+		ux3d::slimktx2::DefaultFileIOCallback();
 
-	callbacks.allocate = allocate;
-	callbacks.free = deallocate;
-	callbacks.write = writeToFile;
-	callbacks.read = readFromFile;
-	callbacks.tell = tell;
-	callbacks.log = log;
-	
 	m_slimKTX2.setCallbacks(callbacks);
 	m_slimKTX2.specifyFormat(static_cast<ux3d::slimktx2::Format>(_vkFormat), _width, _height, _levels, _isCubeMap ? 6u : 1u, 0u, 0u);
-	m_slimKTX2.allocateContainer();
+	m_slimKTX2.allocateMipLevelArray();
+	m_slimKTX2.addDFDBlock(ux3d::slimktx2::DataFormatDesc::BlockHeader()); // add default dfd
 }
 
 IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, uint32_t _level)
@@ -89,41 +78,6 @@ IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
 	return Success;
 }
 
-size_t IBLLib::KtxImage::readFromFile(void* _pUserData, void* _file, void* _pData, size_t _size)
-{
-	FILE* pFile = static_cast<FILE*>(_file);
-	return fread(_pData, sizeof(uint8_t), _size, pFile);
-}
-
-size_t IBLLib::KtxImage::tell(void* _pUserData, void* _file)
-{
-	FILE* pFile = static_cast<FILE*>(_file);
-	return ftell(pFile);
-}
-
-void IBLLib::KtxImage::log(void* _pUserData, const char* _format, va_list _args)
-{
-	char buffer[512];
-	vsnprintf(buffer, sizeof(buffer), _format, _args);
-	printf(buffer);
-}
-
-void IBLLib::KtxImage::writeToFile(void* _pUserData, void* _file, const void* _pData, size_t _size)
-{
-	FILE* pFile = static_cast<FILE*>(_file);
-	fwrite(_pData, sizeof(uint8_t), _size, pFile);
-}
-
 IBLLib::KtxImage::~KtxImage()
 {
-}
-
-void* IBLLib::KtxImage::allocate(void* _pUserData, size_t _size)
-{
-	return malloc(_size);
-}
-
-void IBLLib::KtxImage::deallocate(void* _pUserData, void* _pData)
-{
-	free(_pData);
 }
