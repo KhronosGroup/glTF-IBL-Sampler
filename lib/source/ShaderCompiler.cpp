@@ -1,7 +1,7 @@
 #include "ShaderCompiler.h"
 
 #include <glslang/Public/ShaderLang.h>
-#include <SPIRV/GlslangToSpv.h>
+#include <glslang/SPIRV/GlslangToSpv.h>
 
 static const TBuiltInResource DefaultTBuiltInResource = {
 	/* .MaxLights = */ 32,
