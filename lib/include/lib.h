@@ -3,14 +3,14 @@
 
 namespace IBLLib
 {
-	enum OutputFormat
+	enum class OutputFormat
 	{
 		R8G8B8A8_UNORM = 37,
 		R16G16B16A16_SFLOAT = 97,
 		R32G32B32A32_SFLOAT = 109
 	};
 
-	enum Distribution : unsigned int 
+	enum class Distribution : unsigned int 
 	{
 		Lambertian = 0,
 		GGX = 1,

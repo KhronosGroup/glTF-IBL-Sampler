@@ -3,4 +3,4 @@
 	url = https://github.com/nothings/stb.git
 [submodule "thirdparty/slimktx2"]
 	path = thirdparty/slimktx2
-	url = git@github.com:ux3d/slimktx2.git
+	url = https://github.com/ux3d/slimktx2.git
