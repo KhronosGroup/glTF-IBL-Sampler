@@ -69,11 +69,10 @@ add_library(lib SHARED ${lib_sources} ${lib_includes})
 target_include_directories(lib PUBLIC "${lib_includes}")
 
 target_include_directories(lib PRIVATE "${Vulkan_INCLUDE_DIR}")
-target_link_libraries(lib PRIVATE "${Vulkan_LIBRARIES}")
-
-find_package(Glslang REQUIRED)
-target_link_libraries(lib PRIVATE glslang SPIRV)
-#source_group("include" FILES ${lib_includes})
+# Workaround to get the either the lib or lib32 path
+get_filename_component(Vulkan_LIB "${Vulkan_LIBRARY}" DIRECTORY)
+target_link_directories(lib PRIVATE "${Vulkan_LIB}")
+target_link_libraries(lib PRIVATE "${Vulkan_LIBRARIES}" shaderc_combined)
 
 # SLIMKTX2
 add_subdirectory("thirdparty/slimktx2")
