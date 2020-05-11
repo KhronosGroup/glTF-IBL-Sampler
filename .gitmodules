@@ -4,3 +4,6 @@
 [submodule "thirdparty/slimktx2"]
 	path = thirdparty/slimktx2
 	url = git@github.com:ux3d/slimktx2.git
+[submodule "thirdparty/glslang"]
+	path = thirdparty/glslang
+	url = https://github.com/KhronosGroup/glslang
