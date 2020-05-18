@@ -4,6 +4,8 @@
 #include "DefaultConsoleLogCallback.h"
 #include "DefaultFileIOCallback.h"
 
+#include <cstdio>
+
 IBLLib::KtxImage::KtxImage()
 {
 	ux3d::slimktx2::Callbacks callbacks = 
