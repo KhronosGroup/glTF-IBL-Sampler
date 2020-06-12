@@ -61,18 +61,35 @@ add_sources("lib/source/*.cpp" "lib_sources")
 add_sources("lib/include/*.h" "lib_sources")
 add_include_folder("lib/include" "lib_includes")
 
+# STB
 set(STB_INCLUDE_PATH "${CMAKE_CURRENT_LIST_DIR}/thirdparty/stb/" CACHE STRING "")
 set(lib_includes "${lib_includes};${STB_INCLUDE_PATH}")
+
+# glslang
+option(BUILD_EXTERNAL "Build external dependencies in /External" OFF)
+option(SKIP_GLSLANG_INSTALL "Skip installation" ON)
+set(ENABLE_GLSLANG_INSTALL OFF)
+option(ENABLE_SPVREMAPPER "Enables building of SPVRemapper" OFF)
+option(ENABLE_GLSLANG_BINARIES "Builds glslangValidator and spirv-remap" OFF)
+option(ENABLE_GLSLANG_WEB "Reduces glslang to minimum needed for web use" OFF)
+option(ENABLE_GLSLANG_WEB_DEVEL "For ENABLE_GLSLANG_WEB builds, enables compilation error messages" OFF)
+option(ENABLE_EMSCRIPTEN_SINGLE_FILE "If using Emscripten, enables SINGLE_FILE build" OFF)
+option(ENABLE_EMSCRIPTEN_ENVIRONMENT_NODE "If using Emscripten, builds to run on Node instead of Web" OFF)
+option(ENABLE_HLSL "Enables HLSL input support" OFF)
+
+add_subdirectory(thirdparty/glslang)
 
 #lib project
 add_library(lib SHARED ${lib_sources} ${lib_includes})
 target_include_directories(lib PUBLIC "${lib_includes}")
 
+# glslang
 target_include_directories(lib PRIVATE "${Vulkan_INCLUDE_DIR}")
-# Workaround to get the either the lib or lib32 path
-get_filename_component(Vulkan_LIB "${Vulkan_LIBRARY}" DIRECTORY)
-target_link_directories(lib PRIVATE "${Vulkan_LIB}")
-target_link_libraries(lib PRIVATE "${Vulkan_LIBRARIES}" shaderc_combined)
+target_link_libraries(lib PRIVATE glslang SPIRV)
+
+# Vulkan
+target_include_directories(lib PRIVATE "${Vulkan_INCLUDE_DIR}")
+target_link_libraries(lib PRIVATE "${Vulkan_LIBRARIES}")
 
 # SLIMKTX2
 add_subdirectory("thirdparty/slimktx2")
