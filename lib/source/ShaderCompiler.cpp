@@ -1,7 +1,7 @@
 #include "ShaderCompiler.h"
 
 #include <glslang/Public/ShaderLang.h>
-#include <glslang/SPIRV/GlslangToSpv.h>
+#include <SPIRV/GlslangToSpv.h>
 
 static const TBuiltInResource DefaultTBuiltInResource = {
 	/* .MaxLights = */ 32,
@@ -97,7 +97,7 @@ static const TBuiltInResource DefaultTBuiltInResource = {
 	/* .maxTaskWorkGroupSizeZ_NV = */ 1,
 	/* .maxMeshViewCountNV = */ 4,
 
-	/* .limits = */ {
+	/* .limits = */
 	/* .nonInductiveForLoops = */ 1,
 	/* .whileLoops = */ 1,
 	/* .doWhileLoops = */ 1,
@@ -107,7 +107,7 @@ static const TBuiltInResource DefaultTBuiltInResource = {
 	/* .generalSamplerIndexing = */ 1,
 	/* .generalVariableIndexing = */ 1,
 	/* .generalConstantMatrixVectorIndexing = */ 1,
-} };
+ };
 
 bool IBLLib::ShaderCompiler::compile(const std::vector<char>& _glslBlob, const char* _entryPoint, Stage _stage, std::vector<uint32_t>& _outSpvBlob)
 {
