@@ -109,7 +109,7 @@ static const TBuiltInResource DefaultTBuiltInResource = {
 	/* .generalConstantMatrixVectorIndexing = */ 1,
  };
 
-bool IBLLib::ShaderCompiler::compile(const std::vector<char>& _glslBlob, const char* _entryPoint, Stage _stage, std::vector<uint32_t>& _outSpvBlob)
+bool IBLLib::ShaderCompiler::compile(const std::string& _glslBlob, const char* _entryPoint, Stage _stage, std::vector<uint32_t>& _outSpvBlob)
 {
 	_outSpvBlob.clear();
 

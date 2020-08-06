@@ -1,3 +1,4 @@
+R""(
 #version 450
 precision highp float;
 
@@ -11,3 +12,4 @@ void main()
    v_UV.y = (y+1.0)*0.5;    
    gl_Position = vec4(x, y, 0.0, 1.0);
 }
+)""

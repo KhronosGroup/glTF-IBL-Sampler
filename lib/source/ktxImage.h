@@ -15,7 +15,7 @@ namespace IBLLib
 		KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap);
 		~KtxImage();
 
-		IBLLib::Result loadKtx2(const char* _pFilePath);
+		Result loadKtx2(const char* _pFilePath);
 
 		Result writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, uint32_t _level);
 		Result save(const char* _pathOut);
