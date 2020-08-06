@@ -57,13 +57,13 @@ endif()
 find_package(Vulkan REQUIRED)
 
 #lib sources
-add_sources("lib/source/*.cpp" "lib_sources")
-add_sources("lib/include/*.h" "lib_sources")
-add_include_folder("lib/include" "lib_includes")
+add_sources("lib/source/*.cpp" lib_sources)
+add_sources("lib/include/*.h" lib_headers)
+add_include_folder("lib/include" lib_include_dirs)
 
 # STB
 set(STB_INCLUDE_PATH "${CMAKE_CURRENT_LIST_DIR}/thirdparty/stb/" CACHE STRING "")
-set(lib_includes "${lib_includes};${STB_INCLUDE_PATH}")
+set(lib_include_dirs "${lib_include_dirs};${STB_INCLUDE_PATH}")
 
 # glslang
 option(BUILD_EXTERNAL "Build external dependencies in /External" OFF)
@@ -80,25 +80,27 @@ option(ENABLE_HLSL "Enables HLSL input support" OFF)
 add_subdirectory(thirdparty/glslang)
 
 #lib project
-add_library(lib SHARED ${lib_sources} ${lib_includes})
-target_include_directories(lib PUBLIC "${lib_includes}")
+add_library(GltfIblSampler SHARED ${lib_sources} ${lib_headers})
+target_include_directories(GltfIblSampler PUBLIC "${lib_include_dirs}")
+# specify the public headers (will be copied to `include` in install step)
+set_target_properties(GltfIblSampler PROPERTIES PUBLIC_HEADER "${lib_headers}")
 
 # glslang
-target_include_directories(lib PRIVATE "${Vulkan_INCLUDE_DIR}")
-target_link_libraries(lib PRIVATE glslang SPIRV)
+target_include_directories(GltfIblSampler PRIVATE "${Vulkan_INCLUDE_DIR}")
+target_link_libraries(GltfIblSampler PRIVATE glslang SPIRV)
 
 # Vulkan
-target_include_directories(lib PRIVATE "${Vulkan_INCLUDE_DIR}")
-target_link_libraries(lib PRIVATE "${Vulkan_LIBRARIES}")
+target_include_directories(GltfIblSampler PRIVATE "${Vulkan_INCLUDE_DIR}")
+target_link_libraries(GltfIblSampler PRIVATE "${Vulkan_LIBRARIES}")
 
 # SLIMKTX2
 add_subdirectory("thirdparty/slimktx2")
-target_link_libraries(lib PRIVATE slimktx2)
+target_link_libraries(GltfIblSampler PRIVATE slimktx2)
 
 #cli project
 add_sources("cli/source/*.cpp" "cli_sources")
 add_executable(cli "${cli_sources}")
-target_link_libraries(cli PUBLIC lib)
+target_link_libraries(cli PUBLIC GltfIblSampler)
 
 message(STATUS "")
-install(TARGETS cli lib slimktx2)
+install(TARGETS cli GltfIblSampler slimktx2)
