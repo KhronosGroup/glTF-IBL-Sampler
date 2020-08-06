@@ -1,4 +1,4 @@
-#include "lib.h"
+#include "GltfIblSampler.h"
 #include <cstring>
 #include <stdio.h>
 #include <stdlib.h> 

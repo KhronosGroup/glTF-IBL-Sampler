@@ -58,6 +58,7 @@ find_package(Vulkan REQUIRED)
 
 #lib sources
 add_sources("lib/source/*.cpp" lib_sources)
+add_sources("lib/source/*.h" lib_sources)
 add_sources("lib/include/*.h" lib_headers)
 add_include_folder("lib/include" lib_include_dirs)
 

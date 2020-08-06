@@ -1,4 +1,4 @@
-#include "lib.h"
+#include "GltfIblSampler.h"
 #include "vkHelper.h"
 #include "ShaderCompiler.h"
 #include "STBImage.h"
