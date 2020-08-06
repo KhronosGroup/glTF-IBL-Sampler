@@ -101,3 +101,4 @@ add_executable(cli "${cli_sources}")
 target_link_libraries(cli PUBLIC lib)
 
 message(STATUS "")
+install(TARGETS cli lib slimktx2)
