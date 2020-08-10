@@ -191,7 +191,7 @@ Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const char* _
 	Result res = Success;
 
 	const VkFormat cubeMapFormat = pInfo->format;
-	const uint32_t cubeMapFormatByteSize = ux3d::slimktx2::getPixelSize(static_cast<ux3d::slimktx2::Format>(cubeMapFormat));
+	const uint32_t cubeMapFormatByteSize = ux3d::slimktx2::getFormatSize(static_cast<ux3d::slimktx2::Format>(cubeMapFormat));
 	const uint32_t cubeMapSideLength = pInfo->extent.width;
 	const uint32_t mipLevels = pInfo->mipLevels;
 
@@ -344,7 +344,7 @@ Result download2DImage(vkHelper& _vulkan, const VkImage _srcImage, const char* _
 	Result res = Success;
 
 	const VkFormat format = pInfo->format;
-	const uint32_t formatByteSize = ux3d::slimktx2::getPixelSize(static_cast<ux3d::slimktx2::Format>(format));
+	const uint32_t formatByteSize = ux3d::slimktx2::getFormatSize(static_cast<ux3d::slimktx2::Format>(format));
 	const uint32_t width = pInfo->extent.width;
 	const uint32_t height = pInfo->extent.width;
 	const size_t imageByteSize = width * height * formatByteSize;
