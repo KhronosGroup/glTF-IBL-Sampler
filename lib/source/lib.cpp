@@ -326,6 +326,7 @@ Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const char* _
 		res = ktxImage.save(_outputPath);
 		if (res != Result::Success)
 		{
+			printf("Could not save to path %s \n", _outputPath);
 			return res;
 		}
 	}
