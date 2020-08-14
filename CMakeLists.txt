@@ -78,7 +78,10 @@ option(ENABLE_EMSCRIPTEN_SINGLE_FILE "If using Emscripten, enables SINGLE_FILE b
 option(ENABLE_EMSCRIPTEN_ENVIRONMENT_NODE "If using Emscripten, builds to run on Node instead of Web" OFF)
 option(ENABLE_HLSL "Enables HLSL input support" OFF)
 
-add_subdirectory(thirdparty/glslang)
+if(NOT TARGET glslang) 
+    # we need to guard these for the case that a higher level project already added the target
+    add_subdirectory(thirdparty/glslang)
+endif()
 
 #lib project
 add_library(GltfIblSampler SHARED ${lib_sources} ${lib_headers})
@@ -95,7 +98,11 @@ target_include_directories(GltfIblSampler PRIVATE "${Vulkan_INCLUDE_DIR}")
 target_link_libraries(GltfIblSampler PRIVATE "${Vulkan_LIBRARIES}")
 
 # SLIMKTX2
-add_subdirectory("thirdparty/slimktx2")
+if(NOT TARGET slimktx2) 
+    # we need to guard these for the case that a higher level project already created these
+    add_subdirectory("thirdparty/slimktx2")
+endif()
+
 target_link_libraries(GltfIblSampler PRIVATE slimktx2)
 
 #cli project
