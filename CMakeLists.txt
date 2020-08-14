@@ -87,12 +87,10 @@ target_include_directories(GltfIblSampler PUBLIC "${lib_include_dirs}")
 set_target_properties(GltfIblSampler PROPERTIES PUBLIC_HEADER "${lib_headers}")
 
 # glslang
-target_include_directories(GltfIblSampler PRIVATE "${Vulkan_INCLUDE_DIR}")
 target_link_libraries(GltfIblSampler PRIVATE glslang SPIRV)
 
 # Vulkan
-target_include_directories(GltfIblSampler PRIVATE "${Vulkan_INCLUDE_DIR}")
-target_link_libraries(GltfIblSampler PRIVATE "${Vulkan_LIBRARIES}")
+target_link_libraries(GltfIblSampler PRIVATE Vulkan::Vulkan)
 
 # SLIMKTX2
 if(NOT TARGET slimktx2) 
