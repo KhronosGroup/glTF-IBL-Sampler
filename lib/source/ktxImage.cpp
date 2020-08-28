@@ -1,5 +1,7 @@
 #include "ktxImage.h"
 
+#include <stdio.h>
+
 #include "DefaultAllocationCallback.h"
 #include "DefaultConsoleLogCallback.h"
 #include "DefaultFileIOCallback.h"
