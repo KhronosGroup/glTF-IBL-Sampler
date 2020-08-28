@@ -106,4 +106,4 @@ add_executable(cli "${cli_sources}")
 target_link_libraries(cli PUBLIC GltfIblSampler)
 
 message(STATUS "")
-install(TARGETS cli GltfIblSampler)
+install(TARGETS GltfIblSampler)
