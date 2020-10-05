@@ -67,32 +67,28 @@ Result KtxImage::loadKtx2(const char* _pFilePath)
 
 Result KtxImage::writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, uint32_t _level)
 {
-//	if (m_slimKTX2.setImage(_inData.data(), _inData.size(), _level, _side, 0u) != ux3d::slimktx2::Result::Success)
-//	{
-//		return KtxError;
-//	}
+	KTX_error_code result = ktxTexture_SetImageFromMemory(ktxTexture(m_ktxTexture), _level, 0u, _side, _inData.data(), _inData.size());
+
+	if(result != KTX_SUCCESS)
+	{
+		printf("Could not write image data to ktx texture");
+		return Result::KtxError;
+	}
 
 	return Success;
 }
 
 Result KtxImage::save(const char* _pathOut)
-{	
-//	FILE* pFile = fopen(_pathOut, "wb");
-//
-//	if (pFile == NULL)
-//	{
-//		return Result::FileNotFound;
-//	}
-//
-//	if (ux3d::slimktx2::Result::Success != m_slimKTX2.serialize(pFile))
-//	{
-//		fclose(pFile);
-//		return Result::KtxError;
-//	}
-//
-//	printf("Ktx file successfully written to: %s\n", _pathOut);
-//
-//	fclose(pFile);
+{
+
+	KTX_error_code result = ktxTexture_WriteToNamedFile(ktxTexture(m_ktxTexture), _pathOut);
+
+	if(result != KTX_SUCCESS)
+	{
+		printf("Could not write ktx file");
+		return Result::KtxError;
+	}
+
 	return Success;
 }
 
