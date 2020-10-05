@@ -17,13 +17,13 @@ KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32
 {
 		// fill the create info for ktx2 (we don't support ktx 1)
 	ktxTextureCreateInfo createInfo;
-	createInfo.vkFormat = VK_FORMAT_R8G8B8_UNORM;
+	createInfo.vkFormat = _vkFormat;
 	createInfo.baseWidth = _width;
 	createInfo.baseHeight = _height;
-	createInfo.baseDepth = 0u;
-	createInfo.numDimensions = 4u;
+	createInfo.baseDepth = 1u;
+	createInfo.numDimensions = 2u;
 	createInfo.numLevels = _levels;
-	createInfo.numLayers = 0u;
+	createInfo.numLayers = 1u;
 	createInfo.numFaces = _isCubeMap ? 6u : 1u;
 	createInfo.isArray = KTX_FALSE;
 	createInfo.generateMipmaps = KTX_FALSE;
@@ -34,7 +34,7 @@ KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32
 															&m_ktxTexture);
 	if(result != KTX_SUCCESS)
 	{
-		printf("Could not create ktx texture");
+		printf("Could not create ktx texture\n");
 		m_ktxTexture = nullptr;
 	}
 }
@@ -67,7 +67,7 @@ Result KtxImage::writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, 
 
 	if(result != KTX_SUCCESS)
 	{
-		printf("Could not write image data to ktx texture");
+		printf("Could not write image data to ktx texture\n");
 		return Result::KtxError;
 	}
 
@@ -81,7 +81,7 @@ Result KtxImage::save(const char* _pathOut)
 
 	if(result != KTX_SUCCESS)
 	{
-		printf("Could not write ktx file");
+		printf("Could not write ktx file\n");
 		return Result::KtxError;
 	}
 
