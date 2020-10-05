@@ -8,8 +8,7 @@
 #include <stdio.h>
 //#include <string>
 
-// TODO: Remove
-#include "slimktx2.h"
+#include "format.h"
 
 namespace IBLLib
 {
@@ -194,7 +193,7 @@ Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const char* _
 	Result res = Success;
 
 	const VkFormat cubeMapFormat = pInfo->format;
-	const uint32_t cubeMapFormatByteSize = ux3d::slimktx2::getFormatSize(static_cast<ux3d::slimktx2::Format>(cubeMapFormat));
+	const uint32_t cubeMapFormatByteSize = getFormatSize(cubeMapFormat);
 	const uint32_t cubeMapSideLength = pInfo->extent.width;
 	const uint32_t mipLevels = pInfo->mipLevels;
 
@@ -348,7 +347,7 @@ Result download2DImage(vkHelper& _vulkan, const VkImage _srcImage, const char* _
 	Result res = Success;
 
 	const VkFormat format = pInfo->format;
-	const uint32_t formatByteSize = ux3d::slimktx2::getFormatSize(static_cast<ux3d::slimktx2::Format>(format));
+	const uint32_t formatByteSize = getFormatSize(format);
 	const uint32_t width = pInfo->extent.width;
 	const uint32_t height = pInfo->extent.width;
 	const size_t imageByteSize = width * height * formatByteSize;
@@ -427,7 +426,7 @@ Result download2DImage(vkHelper& _vulkan, const VkImage _srcImage, const char* _
 		}
 
 		// Compute channel count by dividing the pixel byte length through each channels byte length.
-		const uint32_t channels = ux3d::slimktx2::getChannelCount(static_cast<ux3d::slimktx2::Format>(pInfo->format));
+		const uint32_t channels = getChannelCount(pInfo->format);
 
 		// Copy the outputted image (format with 1, 2 or 4 channels) into a 3-channel image.
 		// This is kind of a hack (this function is currently only used to write the BRDF LUT to disk):
