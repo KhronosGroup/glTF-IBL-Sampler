@@ -2,10 +2,6 @@
 
 #include <stdio.h>
 
-#include "DefaultAllocationCallback.h"
-#include "DefaultConsoleLogCallback.h"
-#include "DefaultFileIOCallback.h"
-
 #include <ktx.h>
 #include <vk_funcs.h>
 #include <ktxvulkan.h>

@@ -100,10 +100,6 @@ endif()
 
 target_link_libraries(GltfIblSampler PRIVATE ktx)
 
-# TODO: remove
-add_subdirectory("thirdparty/slimktx2")
-target_link_libraries(GltfIblSampler PRIVATE slimktx2)
-
 
 #cli project
 add_sources("cli/source/*.cpp" "cli_sources")
