@@ -96,3 +96,32 @@ Result KtxImage::save(const char* _pathOut)
 	return Success;
 }
 
+uint32_t KtxImage::getWidth() const
+{
+	assert(((void)"Ktx texture must be initialized", m_ktxTexture == nullptr));
+	return m_ktxTexture->baseWidth;
+}
+
+uint32_t KtxImage::getHeight() const
+{
+	assert(((void)"Ktx texture must be initialized", m_ktxTexture == nullptr));
+	return m_ktxTexture->baseHeight;
+}
+
+uint32_t KtxImage::getLevels() const
+{
+	assert(((void)"Ktx texture must be initialized", m_ktxTexture == nullptr));
+	return m_ktxTexture->numLevels;
+}
+
+bool KtxImage::isCubeMap() const
+{
+	assert(((void)"Ktx texture must be initialized", m_ktxTexture == nullptr));
+	return m_ktxTexture->numFaces == 6u;
+}
+
+VkFormat KtxImage::getFormat() const
+{
+	assert(((void)"Ktx texture must be initialized", m_ktxTexture == nullptr));
+	return static_cast<VkFormat>(m_ktxTexture->vkFormat);
+}

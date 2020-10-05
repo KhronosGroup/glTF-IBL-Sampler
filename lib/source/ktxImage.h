@@ -11,8 +11,9 @@ namespace IBLLib
 	class KtxImage
 	{
 	public:
-
-		KtxImage();			
+		// use this constructor if you want to load a ktx file
+		KtxImage();
+		// use this constructor if you want to create a ktx file
 		KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap);
 		~KtxImage();
 
