@@ -8,6 +8,9 @@
 #include <stdio.h>
 //#include <string>
 
+// TODO: Remove
+#include "slimktx2.h"
+
 namespace IBLLib
 {
 

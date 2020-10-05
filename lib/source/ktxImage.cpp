@@ -6,80 +6,93 @@
 #include "DefaultConsoleLogCallback.h"
 #include "DefaultFileIOCallback.h"
 
-IBLLib::KtxImage::KtxImage()
-{
-	ux3d::slimktx2::Callbacks callbacks = 
-		ux3d::slimktx2::DefaultAllocationCallback() |
-		ux3d::slimktx2::DefaultConsoleLogCallback() |
-		ux3d::slimktx2::DefaultFileIOCallback();
+#include <ktx.h>
+#include <vk_funcs.h>
+#include <ktxvulkan.h>
+#include <vulkan/vulkan.h>
 
-	m_slimKTX2.setCallbacks(callbacks);
+using namespace IBLLib;
+
+KtxImage::KtxImage()
+{
 }
 
-IBLLib::Result IBLLib::KtxImage::loadKtx2(const char* _pFilePath)
+KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap)
 {
-	FILE* pFile = fopen(_pFilePath, "rb");
+		// fill the create info for ktx2 (we don't support ktx 1)
+	ktxTextureCreateInfo createInfo;
+	createInfo.vkFormat = VK_FORMAT_R8G8B8_UNORM;
+	createInfo.baseWidth = _width;
+	createInfo.baseHeight = _height;
+	createInfo.baseDepth = 0u;
+	createInfo.numDimensions = 4u;
+	createInfo.numLevels = _levels;
+	createInfo.numLayers = 0u;
+	createInfo.numFaces = _isCubeMap ? 6u : 1u;
+	createInfo.isArray = KTX_FALSE;
+	createInfo.generateMipmaps = KTX_FALSE;
 
-	if (pFile == NULL)
+	KTX_error_code result;
+	result = ktxTexture2_Create(&createInfo,
+															KTX_TEXTURE_CREATE_ALLOC_STORAGE,
+															&m_ktxTexture);
+	if(result != KTX_SUCCESS)
 	{
-		printf("Could not open file '%s'\n", _pFilePath);
-		return Result::FileNotFound;
+		printf("Could not create ktx texture");
+		m_ktxTexture = nullptr;
+	}
+}
+
+KtxImage::~KtxImage()
+{
+	ktxTexture_Destroy(ktxTexture(m_ktxTexture));
+}
+
+Result KtxImage::loadKtx2(const char* _pFilePath)
+{
+	assert(((void)"m_ktxTexture must be uninitialized.", m_ktxTexture != nullptr));
+
+	KTX_error_code result;
+	result = ktxTexture2_CreateFromNamedFile(_pFilePath,
+																					KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT,
+																					&m_ktxTexture);
+
+	if(result != KTX_SUCCESS)
+	{
+		printf("Could not load ktx file at %s \n", _pFilePath);
 	}
 
-	if (m_slimKTX2.parse(pFile) != ux3d::slimktx2::Result::Success)
-	{
-		fclose(pFile);
-		return Result::KtxError;
-	}
-
-	fclose(pFile);
 	return Result::Success;
 }
 
-IBLLib::KtxImage::KtxImage(uint32_t _width, uint32_t _height, VkFormat _vkFormat, uint32_t _levels, bool _isCubeMap)
+Result KtxImage::writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, uint32_t _level)
 {
-	ux3d::slimktx2::Callbacks callbacks =
-		ux3d::slimktx2::DefaultAllocationCallback() |
-		ux3d::slimktx2::DefaultConsoleLogCallback() |
-		ux3d::slimktx2::DefaultFileIOCallback();
-
-	m_slimKTX2.setCallbacks(callbacks);
-	m_slimKTX2.specifyFormat(static_cast<ux3d::slimktx2::Format>(_vkFormat), _width, _height, _levels, _isCubeMap ? 6u : 1u, 0u, 0u);
-	m_slimKTX2.allocateMipLevelArray();
-	m_slimKTX2.addDFDBlock(ux3d::slimktx2::DataFormatDesc::BlockHeader()); // add default dfd
-}
-
-IBLLib::Result IBLLib::KtxImage::writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, uint32_t _level)
-{
-	if (m_slimKTX2.setImage(_inData.data(), _inData.size(), _level, _side, 0u) != ux3d::slimktx2::Result::Success)
-	{
-		return KtxError;
-	}
+//	if (m_slimKTX2.setImage(_inData.data(), _inData.size(), _level, _side, 0u) != ux3d::slimktx2::Result::Success)
+//	{
+//		return KtxError;
+//	}
 
 	return Success;
 }
 
-IBLLib::Result IBLLib::KtxImage::save(const char* _pathOut)
+Result KtxImage::save(const char* _pathOut)
 {	
-	FILE* pFile = fopen(_pathOut, "wb");
-
-	if (pFile == NULL)
-	{
-		return Result::FileNotFound;
-	}
-
-	if (ux3d::slimktx2::Result::Success != m_slimKTX2.serialize(pFile))
-	{
-		fclose(pFile);
-		return Result::KtxError;
-	}
-
-	printf("Ktx file successfully written to: %s\n", _pathOut);
-
-	fclose(pFile);
+//	FILE* pFile = fopen(_pathOut, "wb");
+//
+//	if (pFile == NULL)
+//	{
+//		return Result::FileNotFound;
+//	}
+//
+//	if (ux3d::slimktx2::Result::Success != m_slimKTX2.serialize(pFile))
+//	{
+//		fclose(pFile);
+//		return Result::KtxError;
+//	}
+//
+//	printf("Ktx file successfully written to: %s\n", _pathOut);
+//
+//	fclose(pFile);
 	return Success;
 }
 
-IBLLib::KtxImage::~KtxImage()
-{
-}

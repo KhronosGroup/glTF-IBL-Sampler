@@ -2,8 +2,9 @@
 
 #include <vector>
 #include <vulkan/vulkan.h>
-#include "slimktx2.h"
 #include "ResultType.h"
+
+struct ktxTexture2;
 
 namespace IBLLib
 {
@@ -20,14 +21,14 @@ namespace IBLLib
 		Result writeFace(const std::vector<uint8_t>& _inData, uint32_t _side, uint32_t _level);
 		Result save(const char* _pathOut);
 
-		uint32_t getWidth() const { return m_slimKTX2.getHeader().pixelWidth; }
-		uint32_t getHeight() const { return m_slimKTX2.getHeader().pixelHeight; }
-		uint32_t getLevels() const { return m_slimKTX2.getHeader().levelCount; }
-		bool isCubeMap() const { return m_slimKTX2.getHeader().faceCount == 6u; }
-		VkFormat getFormat() const { return static_cast<VkFormat>(m_slimKTX2.getHeader().vkFormat); }
+		uint32_t getWidth() const;
+		uint32_t getHeight() const;
+		uint32_t getLevels() const;
+		bool isCubeMap() const;
+		VkFormat getFormat() const;
 
 	private:
-		ux3d::slimktx2::SlimKTX2 m_slimKTX2;
+		ktxTexture2* m_ktxTexture = nullptr;
 	};
 
 } // !IBLLIb
