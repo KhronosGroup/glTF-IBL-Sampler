@@ -92,13 +92,18 @@ target_link_libraries(GltfIblSampler PRIVATE glslang SPIRV)
 # Vulkan
 target_link_libraries(GltfIblSampler PRIVATE Vulkan::Vulkan)
 
-# SLIMKTX2
-if(NOT TARGET slimktx2) 
-    # we need to guard these for the case that a higher level project already created these
-    add_subdirectory("thirdparty/slimktx2")
+# libktx
+if(NOT TARGET ktx) 
+    # we need to guard the include for the case that a higher level project already created the target
+    add_subdirectory("thirdparty/libktx")
 endif()
 
+target_link_libraries(GltfIblSampler PRIVATE ktx)
+
+# TODO: remove
+add_subdirectory("thirdparty/slimktx2")
 target_link_libraries(GltfIblSampler PRIVATE slimktx2)
+
 
 #cli project
 add_sources("cli/source/*.cpp" "cli_sources")
