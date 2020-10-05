@@ -2,9 +2,6 @@
 
 #include <cstdint>
 
-#include <ktx.h>
-#include <vk_funcs.h>
-#include <ktxvulkan.h>
 #include <vulkan/vulkan.h>
 
 namespace IBLLib
