@@ -7,6 +7,8 @@
 #include <ktxvulkan.h>
 #include <vulkan/vulkan.h>
 
+#include <cassert.h>
+
 using namespace IBLLib;
 
 KtxImage::KtxImage()
