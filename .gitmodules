@@ -4,6 +4,3 @@
 [submodule "thirdparty/glslang"]
 	path = thirdparty/glslang
 	url = https://github.com/KhronosGroup/glslang
-[submodule "thirdparty/libktx"]
-	path = thirdparty/libktx
-	url = git@github.com:KhronosGroup/KTX-Software.git
