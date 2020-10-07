@@ -34,10 +34,10 @@ The project provides a cmake file to generate respective build files.
 
 Third Party Requirements:
 
-* Vulkan SDK
+* [Vulkan SDK](https://vulkan.lunarg.com)
 * Glslang (included in the Vulkan SDK)
-* [STB](https://github.com/nothings/stb) image library (git submodule)
-* [SlimKTX2](https://github.com/ux3d/slimktx2/) (git submodule)
+* [STB](https://github.com/nothings/stb) image library (git submodule, no need to install)
+* [KTX-Software](https://github.com/KhronosGroup/KTX-Software/releases) 
 
 CMake option ```IBLSAMPLER_EXPORT_SHADERS``` can be used to automatically copy the shader folder to the executable folder when generating the project files. By default, shaders will be loaded from their source location in lib/shaders.
 
