@@ -7,7 +7,7 @@
 #include <ktxvulkan.h>
 #include <vulkan/vulkan.h>
 
-#include <cassert.h>
+#include <cassert>
 
 using namespace IBLLib;
 
