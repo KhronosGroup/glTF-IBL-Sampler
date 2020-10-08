@@ -95,7 +95,7 @@ target_link_libraries(GltfIblSampler PRIVATE Vulkan::Vulkan)
 # libktx
 
 find_package(Ktx REQUIRED)
-target_link_libraries(GltfIblSampler PRIVATE ktx)
+target_link_libraries(GltfIblSampler PRIVATE KTX::ktx)
 
 #cli project
 add_sources("cli/source/*.cpp" "cli_sources")
