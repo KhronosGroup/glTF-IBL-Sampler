@@ -93,9 +93,10 @@ target_link_libraries(GltfIblSampler PRIVATE glslang SPIRV)
 target_link_libraries(GltfIblSampler PRIVATE Vulkan::Vulkan)
 
 # libktx
-
-find_package(Ktx REQUIRED)
-target_link_libraries(GltfIblSampler PRIVATE KTX::ktx)
+if(NOT ktx)
+    add_subdirectory(thirdparty/KTX-Software)
+endif()
+target_link_libraries(GltfIblSampler PRIVATE ktx)
 
 #cli project
 add_sources("cli/source/*.cpp" "cli_sources")
