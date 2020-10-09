@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
 
 macro(add_sources expression sources)
-	file(GLOB source_files RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "${expression}")
+	file(GLOB source_files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${expression}")
 	set(${sources} "${${sources}};${source_files}")
 endmacro()
 
 macro(add_include_folder include_folder includes)
-	set(${includes} "${${includes}};${CMAKE_CURRENT_LIST_DIR}/${include_folder}")
+	set(${includes} "${${includes}};${CMAKE_CURRENT_SOURCE_DIR}/${include_folder}")
 endmacro()
 
 function(cmake_option option description default)
@@ -33,7 +33,7 @@ project(glTFIBLSampler)
 
 cmake_option(IBLSAMPLER_EXPORT_SHADERS "" OFF)
 
-set(IBLSAMPLER_SHADERS_DIR "${CMAKE_CURRENT_LIST_DIR}/lib/shaders" CACHE STRING "")
+set(IBLSAMPLER_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/shaders" CACHE STRING "")
 
 if (IBLSAMPLER_EXPORT_SHADERS)
     set(IBLSAMPLER_SHADERS_DIR "shaders" CACHE INTERNAL "" FORCE)
@@ -56,11 +56,11 @@ find_package(Vulkan REQUIRED)
 #lib sources
 add_sources("lib/source/*.cpp" lib_sources)
 add_sources("lib/source/*.h" lib_sources)
-add_sources("lib/include/*.h" lib_headers)
+add_sources("${CMAKE_CURRENT_SOURCE_DIR}/lib/include/*.h" lib_headers)
 add_include_folder("lib/include" lib_include_dirs)
 
 # STB
-set(STB_INCLUDE_PATH "${CMAKE_CURRENT_LIST_DIR}/thirdparty/stb/" CACHE STRING "")
+set(STB_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/stb/" CACHE STRING "")
 set(lib_include_dirs "${lib_include_dirs};${STB_INCLUDE_PATH}")
 
 # glslang
@@ -93,10 +93,8 @@ target_link_libraries(GltfIblSampler PRIVATE glslang SPIRV)
 target_link_libraries(GltfIblSampler PRIVATE Vulkan::Vulkan)
 
 # libktx
-if(NOT ktx)
-    add_subdirectory(thirdparty/KTX-Software)
-endif()
-target_link_libraries(GltfIblSampler PRIVATE ktx)
+include(thirdparty/KTX-Software.cmake)
+target_link_libraries(GltfIblSampler PRIVATE ktx-software-library)
 
 #cli project
 add_sources("cli/source/*.cpp" "cli_sources")
