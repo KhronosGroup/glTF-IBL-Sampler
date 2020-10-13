@@ -94,7 +94,7 @@ target_link_libraries(GltfIblSampler PRIVATE Vulkan::Vulkan)
 
 # libktx
 include(thirdparty/KTX-Software.cmake)
-target_link_libraries(GltfIblSampler PRIVATE ktx-software-library)
+target_link_libraries(GltfIblSampler PRIVATE Ktx::ktx)
 
 #cli project
 add_sources("cli/source/*.cpp" "cli_sources")

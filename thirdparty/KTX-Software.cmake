@@ -1,23 +1,34 @@
 
+set(external_project_name "Ktx")
+set(external_project_target_name "ktx")
+set(external_project_path "KTX-Software")
+set(external_project_cmake_args "-DXCODE_CODE_SIGN_IDENTITY=")
+
 if(MSVC)
-    set(ktx_lib_name "ktx.dll")
+    set(lib_name "${external_project_target_name}.dll")
 elseif(APPLE)
-    set(ktx_lib_name "libktx.dylib")
+    set(lib_name "lib${external_project_target_name}.dylib")
 else()
-    set(ktx_lib_name "libktx.so")
+    set(lib_name "lib${external_project_target_name}.so")
 endif()
+
+set(imported_target ${external_project_name}::${external_project_target_name})
 
 # use a custom branch of basisu, which allows it being built as library
 include(ExternalProject)
-ExternalProject_Add(ktx-software-project
-    PREFIX KTX-Software
-    SOURCE_DIR ${PROJECT_SOURCE_DIR}/thirdparty/KTX-Software
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> -DXCODE_CODE_SIGN_IDENTITY=
-    BUILD_BYPRODUCTS <INSTALL_DIR>/lib/${ktx_lib_name}
+ExternalProject_Add(${external_project_name}
+    PREFIX ${external_project_name}
+    SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/${external_project_path}
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> ${external_project_cmake_args}
+    BUILD_BYPRODUCTS <INSTALL_DIR>/lib/${lib_name}
     )
-ExternalProject_Get_Property(ktx-software-project install_dir)
-set(ktx-software_install_dir ${install_dir})
+ExternalProject_Get_Property(${external_project_name} install_dir)
 
-add_library(ktx-software-library STATIC IMPORTED GLOBAL)
-set_property(TARGET ktx-software-library  PROPERTY IMPORTED_LOCATION ${ktx-software_install_dir}/lib/${ktx_lib_name})
-add_dependencies(ktx-software-library ktx-software-project)
+file(MAKE_DIRECTORY ${install_dir}/include)
+
+add_library(${imported_target} SHARED IMPORTED GLOBAL)
+set_target_properties(${imported_target} PROPERTIES
+    IMPORTED_LOCATION ${install_dir}/lib/${lib_name}
+    INTERFACE_INCLUDE_DIRECTORIES ${install_dir}/include)
+
+add_dependencies(${imported_target} ${external_project_name})
