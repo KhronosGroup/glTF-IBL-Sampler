@@ -8,3 +8,4 @@
     path = thirdparty/KTX-Software
     url = git@github.com:ux3d/KTX-Software.git
     branch = master
+	fetchrecursesubmodules = true
