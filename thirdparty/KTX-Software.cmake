@@ -19,6 +19,7 @@ include(ExternalProject)
 ExternalProject_Add(${external_project_name}
     PREFIX ${external_project_name}
     SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/${external_project_path}
+    INSTALL_DIR ${CMAKE_BINARY_DIR}
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> ${external_project_cmake_args}
     BUILD_BYPRODUCTS <INSTALL_DIR>/lib/${lib_name}
     )
@@ -32,3 +33,5 @@ set_target_properties(${imported_target} PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${install_dir}/include)
 
 add_dependencies(${imported_target} ${external_project_name})
+
+
