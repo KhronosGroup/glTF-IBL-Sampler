@@ -27,7 +27,7 @@ ExternalProject_Get_Property(${external_project_name} install_dir)
 
 file(MAKE_DIRECTORY ${install_dir}/include)
 
-add_library(${imported_target} SHARED IMPORTED GLOBAL)
+add_library(${imported_target} SHARED IMPORTED)
 set_target_properties(${imported_target} PROPERTIES
     IMPORTED_LOCATION ${install_dir}/lib/${lib_name}
     INTERFACE_INCLUDE_DIRECTORIES ${install_dir}/include)

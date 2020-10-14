@@ -1,21 +1,21 @@
 cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
 
 macro(add_sources expression sources)
-	file(GLOB source_files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${expression}")
-	set(${sources} "${${sources}};${source_files}")
+    file(GLOB source_files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${expression}")
+    set(${sources} "${${sources}};${source_files}")
 endmacro()
 
 macro(add_include_folder include_folder includes)
-	set(${includes} "${${includes}};${CMAKE_CURRENT_SOURCE_DIR}/${include_folder}")
+    set(${includes} "${${includes}};${CMAKE_CURRENT_SOURCE_DIR}/${include_folder}")
 endmacro()
 
 function(cmake_option option description default)
-	option(${option} description ${default})
-	if(${option})
-		message(STATUS "'${option}' is TRUE")
-	else()
-		message(STATUS "'${option}' is FALSE")
-	endif()
+    option(${option} description ${default})
+    if(${option})
+        message(STATUS "'${option}' is TRUE")
+    else()
+        message(STATUS "'${option}' is FALSE")
+    endif()
 endfunction()
 
 set(CMAKE_CXX_STANDARD 11)
@@ -27,6 +27,26 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
+    # use, i.e. don't skip the full RPATH for the build tree
+    set(CMAKE_SKIP_BUILD_RPATH FALSE)
+
+    # when building, don't use the install RPATH already
+    # (but later on when installing)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+    # the RPATH to be used when installing
+    set(CMAKE_INSTALL_RPATH "\$ORIGIN")
+    #set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX_ABSOLUTE_PATH}/usr/lib")
+
+    # add the automatically determined parts of the RPATH
+    # which point to directories outside the build tree to the install RPATH
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
+
+    set(CMAKE_SKIP_RPATH FALSE)
+endif()
+
 
 #this project
 project(glTFIBLSampler)
