@@ -5,8 +5,7 @@ set(external_project_cmake_args "-DXCODE_CODE_SIGN_IDENTITY=")
 
 if(MSVC)
     set(lib_name "${external_project_target_name}.dll")
-    set(implib_name "${external_project_target_name}.lib")
-    set(implib_path "<INSTALL_DIR>/lib/${implib_name}")
+    set(imp_lib_name "${external_project_target_name}.lib")
 elseif(APPLE)
     set(lib_name "lib${external_project_target_name}.dylib")
 else()
@@ -20,9 +19,8 @@ include(ExternalProject)
 ExternalProject_Add(${external_project_name}
     PREFIX ${external_project_name}
     SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/${external_project_path}
-    INSTALL_DIR ${CMAKE_BINARY_DIR}
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> ${external_project_cmake_args}
-    BUILD_BYPRODUCTS <INSTALL_DIR>/lib/${lib_name} ${implib_path}
+    BUILD_BYPRODUCTS <INSTALL_DIR>/lib/${lib_name} <INSTALL_DIR>/lib/${imp_lib_name}
     )
 ExternalProject_Get_Property(${external_project_name} install_dir)
 
