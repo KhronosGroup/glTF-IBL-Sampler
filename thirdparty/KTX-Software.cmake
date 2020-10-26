@@ -19,7 +19,7 @@ include(ExternalProject)
 ExternalProject_Add(${external_project_name}
     PREFIX ${external_project_name}
     SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/${external_project_path}
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> ${external_project_cmake_args}
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> -DKTX_FEATURE_TESTS=OFF -DBUILD_TESTING=OFF -DKTX_FEATURE_TOOLS=OFF ${external_project_cmake_args}
     BUILD_BYPRODUCTS <INSTALL_DIR>/lib/${lib_name} <INSTALL_DIR>/lib/${imp_lib_name}
     )
 ExternalProject_Get_Property(${external_project_name} install_dir)
