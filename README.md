@@ -48,8 +48,9 @@ The glTF-IBL-Sampler consists of two projects: lib (shared library) and cli (exe
 The CLI takes an environment HDR image as input. The filtered specular and diffuse cube maps can be stored as KTX1 or KTX2 (with basis compression).
 
 * ```-inputPath```: path to panorama image (default) or cube map (if inputIsCubeMap flag ist set)
-* ```-specularOutput```: output path for specular term of filtered cube map
-* ```-diffuseOutput```: output path for diffuse term of filtered cube map
+* ```-distribution```: choose sample distribution (either 'Lambertian' for diffuse, 'GGX' for specular, or 'Charlie' for sheen)
+* ```-outputCubeMap```: output path for filtered cubemap
+* ```-outLUT```: output path for BRDF LUT
 * ```-sampleCount```: number of samples used for filtering (default = 1024)
 * ```-mipLevelCount```: number of mip levels of specular cube map
 * ```-cubeMapResolution```: resolution of output cube map (default = 1024)
@@ -60,5 +61,5 @@ The CLI takes an environment HDR image as input. The filtered specular and diffu
 Example
 
 ```
-.\cli.exe -inputPath ..\cubemap_in.hdr -inputIsCubeMap -specularOutput ..\..\specular_out.ktx2 -diffuseOutput ..\diffuse_out.ktx2 -sampleCount 1024 -mipLevelCount 5 -cubeMapResolution 1024 -targetFormat R16G16B16A16_SFLOAT
+./cli.exe -inputPath ./input/chromatic.hdr -outCubeMap ./output/chromatic/charlie/sheen.ktx2 -sampleCount 1024 -distribution Charlie -mipLevelCount 9 -cubeMapResolution 1024 -targetFormat R16G16B16A16_SFLOAT
 ```
