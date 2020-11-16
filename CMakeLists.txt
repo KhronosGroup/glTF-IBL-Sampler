@@ -123,3 +123,12 @@ target_link_libraries(cli PUBLIC GltfIblSampler)
 
 message(STATUS "")
 install(TARGETS cli GltfIblSampler)
+
+#copy ktx.dll to right folder in multi-build configs
+add_custom_command(TARGET GltfIblSampler
+  COMMAND ${CMAKE_COMMAND}
+        -DMSVC_BUILD_CONFIG_DIR=${CMAKE_CFG_INTDIR}
+        -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=${CMAKE_BINARY_DIR}
+        -P "${PROJECT_SOURCE_DIR}/cmake/copy_dlls.cmake"
+  VERBATIM
+) 
