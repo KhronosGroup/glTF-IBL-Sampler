@@ -84,6 +84,10 @@ int main(int argc, char* argv[])
 			{
 				targetFormat = R32G32B32A32_SFLOAT;
 			}
+			else if (strcmp(targetFormatString, "E5B9G9R9_UFLOAT_PACK32") == 0)
+			{
+				targetFormat = E5B9G9R9_UFLOAT_PACK32;
+			}
 		}
 		else if (strcmp(argv[i], "-distribution") == 0)
 		{

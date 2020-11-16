@@ -7,7 +7,8 @@ namespace IBLLib
 	{
 		R8G8B8A8_UNORM = 37,
 		R16G16B16A16_SFLOAT = 97,
-		R32G32B32A32_SFLOAT = 109
+		R32G32B32A32_SFLOAT = 109,
+		E5B9G9R9_UFLOAT_PACK32 = 123
 	};
 
 	enum Distribution : unsigned int 

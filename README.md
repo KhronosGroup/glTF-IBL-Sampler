@@ -53,7 +53,7 @@ The CLI takes an environment HDR image as input. The filtered specular and diffu
 * ```-sampleCount```: number of samples used for filtering (default = 1024)
 * ```-mipLevelCount```: number of mip levels of specular cube map
 * ```-cubeMapResolution```: resolution of output cube map (default = 1024)
-* ```-targetFormat```: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT)
+* ```-targetFormat```: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT, E5B9G9R9_UFLOAT_PACK32)
 * ```-lodBias```: level of detail bias applied to filtering (default = 1 )
 * ```-inputIsCubeMap```: if set, a cube map in ktx1 format is expected at input path 
 
