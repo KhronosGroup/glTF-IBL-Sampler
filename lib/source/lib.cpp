@@ -681,8 +681,6 @@ Result panoramaToCubemap(vkHelper& _vulkan, const VkCommandBuffer _commandBuffer
 
 IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCubeMap, const char* _outputPathLUT, Distribution _distribution, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat, float _lodBias, bool _debugOutput)
 {
-	const bool generateLUT = _outputPathLUT != nullptr;
-
 	const VkFormat cubeMapFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 	const VkFormat LUTFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
@@ -825,10 +823,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 			renderPassDesc.addAttachment(cubeMapFormat);
 		}
 
-		if (generateLUT)
-		{
-			renderPassDesc.addAttachment(LUTFormat);
-		}
+		renderPassDesc.addAttachment(LUTFormat);		
 
 		if (vulkan.createRenderPass(renderPass, renderPassDesc.getInfo()) != VK_SUCCESS)
 		{
@@ -891,11 +886,8 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 
 		filterCubeMapPipelineDesc.addColorBlendAttachment(colorBlendAttachment, 6u);
 
-		if (generateLUT)
-		{
-			//colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT;
-			filterCubeMapPipelineDesc.addColorBlendAttachment(colorBlendAttachment, 1u);
-		}
+		//colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT;
+		filterCubeMapPipelineDesc.addColorBlendAttachment(colorBlendAttachment, 1u);
 
 		filterCubeMapPipelineDesc.setViewportExtent(VkExtent2D{ cubeMapSideLength, cubeMapSideLength });
 
@@ -970,9 +962,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		unsigned int currentFramebufferSideLength = cubeMapSideLength >> currentMipLevel;
 		std::vector<VkImageView> renderTargetViews(outputCubeMapViews[currentMipLevel]);
 
-		if (generateLUT) {
-			renderTargetViews.emplace_back(outputLUTView);
-		}
+		renderTargetViews.emplace_back(outputLUTView);
 
 		//Framebuffer will be destroyed automatically at shutdown
 		VkFramebuffer filterOutputFramebuffer = VK_NULL_HANDLE;
@@ -1041,7 +1031,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		return Result::VulkanError;
 	}
 
-	if (generateLUT)
+	if (_outputPathLUT != nullptr)
 	{
 		if (download2DImage(vulkan, outputLUT, _outputPathLUT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) != VK_SUCCESS)
 		{
