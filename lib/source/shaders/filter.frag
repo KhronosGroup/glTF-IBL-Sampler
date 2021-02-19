@@ -87,7 +87,7 @@ float saturate(float v)
 
 // hammersley2d describes a sequence of points in the 2d unit square [0,1)^2
 // that can be used for quasi Monte Carlo integration
-vec2 hammersley2d(int i, int N) {
+vec2 hammersley2d(uint i, uint N) {
     return vec2(float(i)/float(N), bitfieldReverse(i) * 2.3283064365386963e-10);
 }
 
@@ -161,7 +161,28 @@ float D_Charlie(float sheenRoughness, float NdotH)
     return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * UX3D_MATH_PI);
 }
 
-vec3 getImportanceSample(uint sampleIndex, vec3 N, float roughness)
+float PDF(vec3 H, vec3 N, float roughness)
+{
+    float NdotH = dot(N, H);
+    if(pFilterParameters.distribution == cLambertian)
+    {
+        return max(NdotH * (1.0 / UX3D_MATH_PI), 0.0);
+    }
+    else if(pFilterParameters.distribution == cGGX)
+    {
+        float D = D_GGX(NdotH, roughness);
+        return max(D / 4.0, 0.0);
+    }
+    else if(pFilterParameters.distribution == cCharlie)
+    {
+        float D = D_Charlie(roughness, NdotH);
+        return max(D / 4.0, 0.0);
+    }
+
+    return 0.f;
+}
+
+vec4 getImportanceSample(uint sampleIndex, vec3 N, float roughness)
 {
     // generate a quasi monte carlo point in the unit square [0.1)^2
     vec2 hammersleyPoint = hammersley2d(sampleIndex, pFilterParameters.sampleCount);
@@ -182,9 +203,9 @@ vec3 getImportanceSample(uint sampleIndex, vec3 N, float roughness)
         // http://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations.html#Cosine-WeightedHemisphereSampling
         cosTheta = sqrt(1.0 - u);
         sinTheta = sqrt(u); // equivalent to `sqrt(1.0 - cosTheta*cosTheta)`;
-        phi = 2.0 * MATH_PI * v;
+        phi = 2.0 * UX3D_MATH_PI * v;
 
-        pdf = cosTheta / MATH_PI; // evaluation for solid angle, therefore drop the sinTheta
+        pdf = cosTheta / UX3D_MATH_PI; // evaluation for solid angle, therefore drop the sinTheta
     }
     else if(pFilterParameters.distribution == cGGX)
     {
@@ -192,7 +213,7 @@ vec3 getImportanceSample(uint sampleIndex, vec3 N, float roughness)
         float alpha = roughness * roughness;
         cosTheta = sqrt((1.0 - u) / (1.0 + (alpha*alpha - 1.0) * u));
         sinTheta = sqrt(1.0 - cosTheta*cosTheta);
-        phi = 2.0 * MATH_PI * v;
+        phi = 2.0 * UX3D_MATH_PI * v;
     }
     else if(pFilterParameters.distribution == cCharlie)
     {
@@ -200,7 +221,7 @@ vec3 getImportanceSample(uint sampleIndex, vec3 N, float roughness)
         float alpha = roughness * roughness;
         sinTheta = pow(u, alpha / (2.0*alpha + 1.0));
         cosTheta = sqrt(1.0 - sinTheta * sinTheta);
-        phi = 2.0 * MATH_PI * v;
+        phi = 2.0 * UX3D_MATH_PI * v;
     }
 
     // transform the hemisphere sample to the normal coordinate frame
@@ -217,36 +238,13 @@ vec3 getImportanceSample(uint sampleIndex, vec3 N, float roughness)
     return vec4(direction, pdf);
 }
 
-float PDF(vec3 H, vec3 N, float roughness)
-{
-    float NdotH = dot(N, H);
-    if(pFilterParameters.distribution == cLambertian)
-    {
-        return max(NdotH * (1.0 / MATH_PI), 0.0);
-    }
-    else if(pFilterParameters.distribution == cGGX)
-    {
-        float D = D_GGX(NdotH, roughness);
-        return max(D / 4.0, 0.0);
-    }
-    else if(pFilterParameters.distribution == cCharlie)
-    {
-        float D = D_Charlie(roughness, NdotH);
-        return max(D / 4.0, 0.0);
-    }
-
-    return 0.f;
-}
-
-{
-
 // Mipmap Filtered Samples (GPU Gems 3, 20.4)
 // https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-20-gpu-based-importance-sampling
 float computeLod(float pdf)
 {
     // IBL Baker (Matt Davidson)
     // https://github.com/derkreature/IBLBaker/blob/65d244546d2e79dd8df18a28efdabcf1f2eb7717/data/shadersD3D11/IblImportanceSamplingDiffuse.fx#L215
-    float solidAngleTexel = 4.0 * MATH_PI / (6.0 * float(pFilterParameters.width) * float(pFilterParameters.sampleCount));
+    float solidAngleTexel = 4.0 * UX3D_MATH_PI / (6.0 * float(pFilterParameters.width) * float(pFilterParameters.sampleCount));
     float solidAngleSample = 1.0 / (float(pFilterParameters.sampleCount) * pdf);
     float lod = 0.5 * log2(solidAngleSample / solidAngleTexel);
 
@@ -382,7 +380,7 @@ vec3 LUT(float NdotV, float roughness)
     // The PDF is simply pdf(v, h) -> NDF * <nh>.
     // To parametrize the PDF over l, use the Jacobian transform, yielding to: pdf(v, l) -> NDF * <nh> / 4<vh>
     // Since the BRDF divide through the PDF to be normalized, the 4 can be pulled out of the integral.
-    return vec3(4.0 * A, 4.0 * B, 4.0 * 2.0 * MATH_PI * C) / float(pFilterParameters.sampleCount);
+    return vec3(4.0 * A, 4.0 * B, 4.0 * 2.0 * UX3D_MATH_PI * C) / float(pFilterParameters.sampleCount);
 }
 
 // entry point
