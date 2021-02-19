@@ -85,40 +85,40 @@ float saturate(float v)
 	return clamp(v, 0.0f, 1.0f);
 }
 
-float Hammersley(uint i)
-{
-    return bitfieldReverse(i) * 2.3283064365386963e-10;
+// hammersley2d describes a sequence of points in the 2d unit square [0,1)^2
+// that can be used for quasi Monte Carlo integration
+vec2 hammersley2d(int i, int N) {
+    return vec2(float(i)/float(N), bitfieldReverse(i) * 2.3283064365386963e-10);
 }
 
-vec3 getImportanceSampleDirection(vec3 normal, float sinTheta, float cosTheta, float phi)
-{
-	vec3 H = normalize(vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta));
-    
+// Hemisphere Sample
+
+// TBN generates a tangent bitangent normal coordinate frame from the normal
+// (the normal must be normalized)
+mat3 generateTBN(vec3 normal)
+{ 
     vec3 bitangent = vec3(0.0, 1.0, 0.0);
 	
-	// Eliminates singularities.
-	float NdotX = dot(normal, vec3(1.0, 0.0, 0.0));
-	float NdotY = dot(normal, vec3(0.0, 1.0, 0.0));
-	float NdotZ = dot(normal, vec3(0.0, 0.0, 1.0));
-	if (abs(NdotY) > abs(NdotX) && abs(NdotY) > abs(NdotZ))
-	{
-		// Sampling +Y or -Y, so we need a more robust bitangent.
-		if (NdotY > 0.0)
-		{
-			bitangent = vec3(0.0, 0.0, 1.0);
-		}
-		else
-		{
-			bitangent = vec3(0.0, 0.0, -1.0);
-		}
-	}
+    float NdotUp = dot(normal, vec3(0.0, 1.0, 0.0));
+    float epsilon = 0.0000001;
+    if (1.0 - abs(NdotUp) <= epsilon)
+    {
+        // Sampling +Y or -Y, so we need a more robust bitangent.
+        if (NdotUp > 0.0)
+        {
+            bitangent = vec3(0.0, 0.0, 1.0);
+        }
+        else
+        {
+            bitangent = vec3(0.0, 0.0, -1.0);
+        }
+    }
 
     vec3 tangent = cross(bitangent, normal);
     bitangent = cross(normal, tangent);
-    
-	return normalize(tangent * H.x + bitangent * H.y + normal * H.z);
+	return mat3(tangent, bitangent, normal);
 }
-
+    
 // https://github.com/google/filament/blob/master/shaders/src/brdf.fs#L136
 float V_Ashikhmin(float NdotL, float NdotV)
 {
@@ -161,115 +161,155 @@ float D_Charlie(float sheenRoughness, float NdotH)
     return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * UX3D_MATH_PI);
 }
 
-vec3 getSampleVector(uint sampleIndex, vec3 N, float roughness)
+vec3 getImportanceSample(uint sampleIndex, vec3 N, float roughness)
 {
-	float X = float(sampleIndex) / float(pFilterParameters.sampleCount);
-	float Y = Hammersley(sampleIndex);
+    // generate a quasi monte carlo point in the unit square [0.1)^2
+    vec2 hammersleyPoint = hammersley2d(sampleIndex, pFilterParameters.sampleCount);
+    float u = hammersleyPoint.x;
+    float v = hammersleyPoint.y;
 
-	float phi = 2.0 * UX3D_MATH_PI * X;
+    // declare importance sample parameters
+    float phi = 0.0; // theoretically there could be a distribution that defines phi differently
     float cosTheta = 0.f;
 	float sinTheta = 0.f;
+    float pdf = 0.0;
 
-	if(pFilterParameters.distribution == cLambertian)
-	{
-		cosTheta = 1.0 - Y;
-		sinTheta = sqrt(1.0 - cosTheta*cosTheta);	
-	}
-	else if(pFilterParameters.distribution == cGGX)
-	{
-		float alpha = roughness * roughness;
-		cosTheta = sqrt((1.0 - Y) / (1.0 + (alpha*alpha - 1.0) * Y));
-		sinTheta = sqrt(1.0 - cosTheta*cosTheta);		
-	}
-	else if(pFilterParameters.distribution == cCharlie)
-	{
-		float alpha = roughness * roughness;
-		sinTheta = pow(Y, alpha / (2.0*alpha + 1.0));
-		cosTheta = sqrt(1.0 - sinTheta * sinTheta);
-	}	
-	
-	return getImportanceSampleDirection(N, sinTheta, cosTheta, phi);
+    // generate the points on the hemisphere with a fitting mapping for
+    // the distribution (e.g. lambertian uses a cosine importance)
+    if(pFilterParameters.distribution == cLambertian)
+    {
+        // Cosine weighted hemisphere sampling
+        // http://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations.html#Cosine-WeightedHemisphereSampling
+        cosTheta = sqrt(1.0 - u);
+        sinTheta = sqrt(u); // equivalent to `sqrt(1.0 - cosTheta*cosTheta)`;
+        phi = 2.0 * MATH_PI * v;
+
+        pdf = cosTheta / MATH_PI; // evaluation for solid angle, therefore drop the sinTheta
+    }
+    else if(pFilterParameters.distribution == cGGX)
+    {
+        // specular mapping
+        float alpha = roughness * roughness;
+        cosTheta = sqrt((1.0 - u) / (1.0 + (alpha*alpha - 1.0) * u));
+        sinTheta = sqrt(1.0 - cosTheta*cosTheta);
+        phi = 2.0 * MATH_PI * v;
+    }
+    else if(pFilterParameters.distribution == cCharlie)
+    {
+        // sheen mapping
+        float alpha = roughness * roughness;
+        sinTheta = pow(u, alpha / (2.0*alpha + 1.0));
+        cosTheta = sqrt(1.0 - sinTheta * sinTheta);
+        phi = 2.0 * MATH_PI * v;
+    }
+
+    // transform the hemisphere sample to the normal coordinate frame
+    // i.e. rotate the hemisphere to the normal direction
+    vec3 localSpaceDirection = normalize(vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta));
+    mat3 TBN = generateTBN(N);
+    vec3 direction = TBN * localSpaceDirection;
+
+    if(pFilterParameters.distribution == cGGX || pFilterParameters.distribution == cCharlie)
+    {
+        pdf = PDF(direction, N, roughness);
+    }
+
+    return vec4(direction, pdf);
 }
 
-float PDF(vec3 V, vec3 H, vec3 N, vec3 L, float roughness)
+float PDF(vec3 H, vec3 N, float roughness)
 {
-	if(pFilterParameters.distribution == cLambertian)
-	{
-		float NdotL = dot(N, L);
-		return max(NdotL * UX3D_MATH_INV_PI, 0.0);
-	}
-	else if(pFilterParameters.distribution == cGGX)
-	{
-		float VdotH = dot(V, H);
-		float NdotH = dot(N, H);
-	
-		float D = D_GGX(NdotH, roughness);
-		return max(D * NdotH / (4.0 * VdotH), 0.0);
-	}
-	else if(pFilterParameters.distribution == cCharlie)
-	{
-		float VdotH = dot(V, H);
-		float NdotH = dot(N, H);
-		
-		float D = D_Charlie(roughness, NdotH);
-		return max(D * NdotH / abs(4.0 * VdotH), 0.0);
-	}
-	
-	return 0.f;
+    float NdotH = dot(N, H);
+    if(pFilterParameters.distribution == cLambertian)
+    {
+        return max(NdotH * (1.0 / MATH_PI), 0.0);
+    }
+    else if(pFilterParameters.distribution == cGGX)
+    {
+        float D = D_GGX(NdotH, roughness);
+        return max(D / 4.0, 0.0);
+    }
+    else if(pFilterParameters.distribution == cCharlie)
+    {
+        float D = D_Charlie(roughness, NdotH);
+        return max(D / 4.0, 0.0);
+    }
+
+    return 0.f;
+}
+
+{
+
+// Mipmap Filtered Samples (GPU Gems 3, 20.4)
+// https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-20-gpu-based-importance-sampling
+float computeLod(float pdf)
+{
+    // IBL Baker (Matt Davidson)
+    // https://github.com/derkreature/IBLBaker/blob/65d244546d2e79dd8df18a28efdabcf1f2eb7717/data/shadersD3D11/IblImportanceSamplingDiffuse.fx#L215
+    float solidAngleTexel = 4.0 * MATH_PI / (6.0 * float(pFilterParameters.width) * float(pFilterParameters.sampleCount));
+    float solidAngleSample = 1.0 / (float(pFilterParameters.sampleCount) * pdf);
+    float lod = 0.5 * log2(solidAngleSample / solidAngleTexel);
+
+    return lod;
 }
 
 vec3 filterColor(vec3 N)
 {
-	vec4 color = vec4(0.f);
-	const uint NumSamples = pFilterParameters.sampleCount;
-	const float solidAngleTexel = 4.0 * UX3D_MATH_PI / (6.0 * pFilterParameters.width * pFilterParameters.width);	
-	
-	for(uint i = 0; i < NumSamples; ++i)
-	{
-		vec3 H = getSampleVector(i, N, pFilterParameters.roughness);
-		
+	  vec4 color = vec4(0.f);
+
+    for(int i = 0; i < pFilterParameters.sampleCount; ++i)
+    {
+        vec4 importanceSample = getImportanceSample(i, N, pFilterParameters.roughness);
+
+        vec3 H = vec3(importanceSample.xyz);
+        float pdf = importanceSample.w;
+
+        // mipmap filtered samples (GPU Gems 3, 20.4)
+        float lod = computeLod(pdf);
+
+        // apply the bias to the lod
+        lod += pFilterParameters.lodBias;
+
         if(pFilterParameters.distribution == cLambertian)
         {
+            float NdotH = clamp(dot(N, H), 0.0, 1.0);
+
             // sample lambertian at a lower resolution to avoid fireflies
-            color += vec4(textureLod(uCubeMap, H, 4.0).rgb * dot(N, H), 1.0);
-            continue;
+            vec3 lambertian = textureLod(uCubeMap, H, lod).rgb;
+
+            //// the below operations cancel each other out
+            // lambertian *= NdotH; // lamberts law
+            // lambertian /= pdf; // invert bias from importance sampling
+            // lambertian /= MATH_PI; // convert irradiance to radiance https://seblagarde.wordpress.com/2012/01/08/pi-or-not-to-pi-in-game-lighting-equation/
+
+            color += vec4(lambertian, 1.0);
         }
+        else if(pFilterParameters.distribution == cGGX || pFilterParameters.distribution == cCharlie)
+        {
+            // Note: reflect takes incident vector.
+            vec3 V = N;
+            vec3 L = normalize(reflect(-V, H));
+            float NdotL = dot(N, L);
 
-		// Note: reflect takes incident vector.
-		// Note: N = V
-		vec3 V = N;
-    
-		vec3 L = normalize(reflect(-V, H));
-    
-		float NdotL = dot(N, L);
+            if (NdotL > 0.0)
+            {
+                if(pFilterParameters.roughness == 0.0)
+                {
+                    // without this the roughness=0 lod is too high (taken from original implementation)
+                    lod = pFilterParameters.lodBias;
+                }
 
-		if (NdotL > 0.0)
-		{
-			float lod = 0.0;
-		
-			if (pFilterParameters.roughness > 0.0 || pFilterParameters.distribution == cLambertian)
-			{		
-				// Mipmap Filtered Samples 
-				// see https://github.com/derkreature/IBLBaker
-				// see https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch20.html
-				float pdf = PDF(V, H, N, L, pFilterParameters.roughness );
-				
-				float solidAngleSample = 1.0 / (NumSamples * pdf);
-				
-				lod = 0.5 * log2(solidAngleSample / solidAngleTexel);
-				lod += pFilterParameters.lodBias;
-			}
+                color += vec4(textureLod(uCubeMap, L, lod).rgb * NdotL, NdotL);
+            }
+        }
+    }
 
-            color += vec4(textureLod(uCubeMap, L, lod).rgb * NdotL, NdotL);		
-		}
-	}
+    if(color.w == 0.f)
+    {
+        return color.rgb;
+    }
 
-	if(color.w == 0.f)
-	{
-		return color.rgb;
-	}
-
-	return color.rgb / color.w;
+    return color.rgb / color.w;
 }
 
 // From the filament docs. Geometric Shadowing function
@@ -286,63 +326,63 @@ float V_SmithGGXCorrelated(float NoV, float NoL, float roughness) {
 vec3 LUT(float NdotV, float roughness)
 {
 	// Compute spherical view vector: (sin(phi), 0, cos(phi))
-	vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV);
+    vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV);
 
-	// The macro surface normal just points up.
-	vec3 N = vec3(0.0, 0.0, 1.0);
+    // The macro surface normal just points up.
+    vec3 N = vec3(0.0, 0.0, 1.0);
 
-	// To make the LUT independant from the material's F0, which is part of the Fresnel term
-	// when substituted by Schlick's approximation, we factor it out of the integral,
-	// yielding to the form: F0 * I1 + I2
-	// I1 and I2 are slighlty different in the Fresnel term, but both only depend on
-	// NoL and roughness, so they are both numerically integrated and written into two channels.
-	float A = 0;
-	float B = 0;
-	float C = 0;
+    // To make the LUT independant from the material's F0, which is part of the Fresnel term
+    // when substituted by Schlick's approximation, we factor it out of the integral,
+    // yielding to the form: F0 * I1 + I2
+    // I1 and I2 are slighlty different in the Fresnel term, but both only depend on
+    // NoL and roughness, so they are both numerically integrated and written into two channels.
+    float A = 0.0;
+    float B = 0.0;
+    float C = 0.0;
 
-	for(uint i = 0; i < pFilterParameters.sampleCount; ++i)
-	{
-		// Importance sampling, depending on the distribution.
-		vec3 H = getSampleVector(i, N, roughness);
-		vec3 L = normalize(reflect(-V, H));
+    for(int i = 0; i < pFilterParameters.sampleCount; ++i)
+    {
+        // Importance sampling, depending on the distribution.
+        vec3 H = getImportanceSample(i, N, roughness).xyz;
+        vec3 L = normalize(reflect(-V, H));
 
-		float NdotL = saturate(L.z);
-		float NdotH = saturate(H.z);
-		float VdotH = saturate(dot(V, H));
-		if (NdotL > 0.0)
-		{
-			if (pFilterParameters.distribution == cGGX)
-			{
-				// LUT for GGX distribution.
+        float NdotL = saturate(L.z);
+        float NdotH = saturate(H.z);
+        float VdotH = saturate(dot(V, H));
+        if (NdotL > 0.0)
+        {
+            if (pFilterParameters.distribution == cGGX)
+            {
+                // LUT for GGX distribution.
 
-				// Taken from: https://bruop.github.io/ibl
-				// Shadertoy: https://www.shadertoy.com/view/3lXXDB
-				// Terms besides V are from the GGX PDF we're dividing by.
-				float V_pdf = V_SmithGGXCorrelated(NdotV, NdotL, roughness) * VdotH * NdotL / NdotH;
-				float Fc = pow(1.0 - VdotH, 5.0);
-				A += (1.0 - Fc) * V_pdf;
-				B += Fc * V_pdf;
-				C += 0;
-			}
+                // Taken from: https://bruop.github.io/ibl
+                // Shadertoy: https://www.shadertoy.com/view/3lXXDB
+                // Terms besides V are from the GGX PDF we're dividing by.
+                float V_pdf = V_SmithGGXCorrelated(NdotV, NdotL, roughness) * VdotH * NdotL / NdotH;
+                float Fc = pow(1.0 - VdotH, 5.0);
+                A += (1.0 - Fc) * V_pdf;
+                B += Fc * V_pdf;
+                C += 0.0;
+            }
 
-			if (pFilterParameters.distribution == cCharlie)
-			{
-				// LUT for Charlie distribution.
-				
-				float sheenDistribution = D_Charlie(roughness, NdotH);
-				float sheenVisibility = V_Ashikhmin(NdotL, NdotV);
+            if (pFilterParameters.distribution == cCharlie)
+            {
+                // LUT for Charlie distribution.
 
-				A += 0;
-				B += 0;
-				C += sheenVisibility * sheenDistribution * NdotL * VdotH;
-			}
-		}
-	}
+                float sheenDistribution = D_Charlie(roughness, NdotH);
+                float sheenVisibility = V_Ashikhmin(NdotL, NdotV);
 
-	// The PDF is simply pdf(v, h) -> NDF * <nh>.
-	// To parametrize the PDF over l, use the Jacobian transform, yielding to: pdf(v, l) -> NDF * <nh> / 4<vh>
-	// Since the BRDF divide through the PDF to be normalized, the 4 can be pulled out of the integral.
-	return vec3(4.0 * A, 4.0 * B, 4.0 * 2.0 * UX3D_MATH_PI * C) / pFilterParameters.sampleCount;
+                A += 0.0;
+                B += 0.0;
+                C += sheenVisibility * sheenDistribution * NdotL * VdotH;
+            }
+        }
+    }
+
+    // The PDF is simply pdf(v, h) -> NDF * <nh>.
+    // To parametrize the PDF over l, use the Jacobian transform, yielding to: pdf(v, l) -> NDF * <nh> / 4<vh>
+    // Since the BRDF divide through the PDF to be normalized, the 4 can be pulled out of the integral.
+    return vec3(4.0 * A, 4.0 * B, 4.0 * 2.0 * MATH_PI * C) / float(pFilterParameters.sampleCount);
 }
 
 // entry point
