@@ -100,7 +100,7 @@ mat3 generateTBN(vec3 normal)
     vec3 bitangent = vec3(0.0, 1.0, 0.0);
 	
     float NdotUp = dot(normal, vec3(0.0, 1.0, 0.0));
-    float epsilon = 0.0000001;
+    float epsilon = 0.000001;
     if (1.0 - abs(NdotUp) <= epsilon)
     {
         // Sampling +Y or -Y, so we need a more robust bitangent.
@@ -114,8 +114,8 @@ mat3 generateTBN(vec3 normal)
         }
     }
 
-    vec3 tangent = cross(bitangent, normal);
-    bitangent = cross(normal, tangent);
+    vec3 tangent = normalize(cross(bitangent, normal));
+    bitangent = normalize(cross(normal, tangent));
 	return mat3(tangent, bitangent, normal);
 }
     
