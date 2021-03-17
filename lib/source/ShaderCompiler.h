@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <stdint.h>
+#include <string>
 
 namespace IBLLib
 {
@@ -18,7 +19,7 @@ namespace IBLLib
 
 		static ShaderCompiler& instance() { static ShaderCompiler inst; return inst; }
 
-		bool compile(const std::vector<char>& _glslBlob, const char* _entryPoint, Stage _stage, std::vector<uint32_t>& _outSpvBlob);
+		bool compile(const std::string& _glslBlob, const char* _entryPoint, Stage _stage, std::vector<uint32_t>& _outSpvBlob);
 
 	private:
 
