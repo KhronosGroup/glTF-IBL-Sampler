@@ -8,6 +8,8 @@
 #include <stdio.h>
 //#include <string>
 
+#include "format.h"
+
 namespace IBLLib
 {
 
@@ -191,7 +193,7 @@ Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const char* _
 	Result res = Success;
 
 	const VkFormat cubeMapFormat = pInfo->format;
-	const uint32_t cubeMapFormatByteSize = ux3d::slimktx2::getFormatSize(static_cast<ux3d::slimktx2::Format>(cubeMapFormat));
+	const uint32_t cubeMapFormatByteSize = getFormatSize(cubeMapFormat);
 	const uint32_t cubeMapSideLength = pInfo->extent.width;
 	const uint32_t mipLevels = pInfo->mipLevels;
 
@@ -345,7 +347,7 @@ Result download2DImage(vkHelper& _vulkan, const VkImage _srcImage, const char* _
 	Result res = Success;
 
 	const VkFormat format = pInfo->format;
-	const uint32_t formatByteSize = ux3d::slimktx2::getFormatSize(static_cast<ux3d::slimktx2::Format>(format));
+	const uint32_t formatByteSize = getFormatSize(format);
 	const uint32_t width = pInfo->extent.width;
 	const uint32_t height = pInfo->extent.width;
 	const size_t imageByteSize = width * height * formatByteSize;
@@ -424,7 +426,7 @@ Result download2DImage(vkHelper& _vulkan, const VkImage _srcImage, const char* _
 		}
 
 		// Compute channel count by dividing the pixel byte length through each channels byte length.
-		const uint32_t channels = ux3d::slimktx2::getChannelCount(static_cast<ux3d::slimktx2::Format>(pInfo->format));
+		const uint32_t channels = getChannelCount(pInfo->format);
 
 		// Copy the outputted image (format with 1, 2 or 4 channels) into a 3-channel image.
 		// This is kind of a hack (this function is currently only used to write the BRDF LUT to disk):
@@ -679,8 +681,6 @@ Result panoramaToCubemap(vkHelper& _vulkan, const VkCommandBuffer _commandBuffer
 
 IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCubeMap, const char* _outputPathLUT, Distribution _distribution, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat, float _lodBias, bool _debugOutput)
 {
-	const bool generateLUT = _outputPathLUT != nullptr;
-
 	const VkFormat cubeMapFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 	const VkFormat LUTFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
@@ -823,10 +823,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 			renderPassDesc.addAttachment(cubeMapFormat);
 		}
 
-		if (generateLUT)
-		{
-			renderPassDesc.addAttachment(LUTFormat);
-		}
+		renderPassDesc.addAttachment(LUTFormat);		
 
 		if (vulkan.createRenderPass(renderPass, renderPassDesc.getInfo()) != VK_SUCCESS)
 		{
@@ -889,11 +886,8 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 
 		filterCubeMapPipelineDesc.addColorBlendAttachment(colorBlendAttachment, 6u);
 
-		if (generateLUT)
-		{
-			//colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT;
-			filterCubeMapPipelineDesc.addColorBlendAttachment(colorBlendAttachment, 1u);
-		}
+		//colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT;
+		filterCubeMapPipelineDesc.addColorBlendAttachment(colorBlendAttachment, 1u);
 
 		filterCubeMapPipelineDesc.setViewportExtent(VkExtent2D{ cubeMapSideLength, cubeMapSideLength });
 
@@ -968,9 +962,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		unsigned int currentFramebufferSideLength = cubeMapSideLength >> currentMipLevel;
 		std::vector<VkImageView> renderTargetViews(outputCubeMapViews[currentMipLevel]);
 
-		if (generateLUT) {
-			renderTargetViews.emplace_back(outputLUTView);
-		}
+		renderTargetViews.emplace_back(outputLUTView);
 
 		//Framebuffer will be destroyed automatically at shutdown
 		VkFramebuffer filterOutputFramebuffer = VK_NULL_HANDLE;
@@ -1039,7 +1031,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		return Result::VulkanError;
 	}
 
-	if (generateLUT)
+	if (_outputPathLUT != nullptr)
 	{
 		if (download2DImage(vulkan, outputLUT, _outputPathLUT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) != VK_SUCCESS)
 		{

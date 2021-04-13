@@ -1,21 +1,21 @@
 cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
 
 macro(add_sources expression sources)
-	file(GLOB source_files RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "${expression}")
-	set(${sources} "${${sources}};${source_files}")
+    file(GLOB source_files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${expression}")
+    set(${sources} "${${sources}};${source_files}")
 endmacro()
 
 macro(add_include_folder include_folder includes)
-	set(${includes} "${${includes}};${CMAKE_CURRENT_LIST_DIR}/${include_folder}")
+    set(${includes} "${${includes}};${CMAKE_CURRENT_SOURCE_DIR}/${include_folder}")
 endmacro()
 
 function(cmake_option option description default)
-	option(${option} description ${default})
-	if(${option})
-		message(STATUS "'${option}' is TRUE")
-	else()
-		message(STATUS "'${option}' is FALSE")
-	endif()
+    option(${option} description ${default})
+    if(${option})
+        message(STATUS "'${option}' is TRUE")
+    else()
+        message(STATUS "'${option}' is FALSE")
+    endif()
 endfunction()
 
 set(CMAKE_CXX_STANDARD 11)
@@ -28,12 +28,32 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
+    # use, i.e. don't skip the full RPATH for the build tree
+    set(CMAKE_SKIP_BUILD_RPATH FALSE)
+
+    # when building, don't use the install RPATH already
+    # (but later on when installing)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+    # the RPATH to be used when installing
+    set(CMAKE_INSTALL_RPATH "\$ORIGIN")
+    #set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX_ABSOLUTE_PATH}/usr/lib")
+
+    # add the automatically determined parts of the RPATH
+    # which point to directories outside the build tree to the install RPATH
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
+
+    set(CMAKE_SKIP_RPATH FALSE)
+endif()
+
+
 #this project
 project(glTFIBLSampler)
 
 cmake_option(IBLSAMPLER_EXPORT_SHADERS "" OFF)
 
-set(IBLSAMPLER_SHADERS_DIR "${CMAKE_CURRENT_LIST_DIR}/lib/shaders" CACHE STRING "")
+set(IBLSAMPLER_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/shaders" CACHE STRING "")
 
 if (IBLSAMPLER_EXPORT_SHADERS)
     set(IBLSAMPLER_SHADERS_DIR "shaders" CACHE INTERNAL "" FORCE)
@@ -56,11 +76,11 @@ find_package(Vulkan REQUIRED)
 #lib sources
 add_sources("lib/source/*.cpp" lib_sources)
 add_sources("lib/source/*.h" lib_sources)
-add_sources("lib/include/*.h" lib_headers)
+add_sources("${CMAKE_CURRENT_SOURCE_DIR}/lib/include/*.h" lib_headers)
 add_include_folder("lib/include" lib_include_dirs)
 
 # STB
-set(STB_INCLUDE_PATH "${CMAKE_CURRENT_LIST_DIR}/thirdparty/stb/" CACHE STRING "")
+set(STB_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/stb/" CACHE STRING "")
 set(lib_include_dirs "${lib_include_dirs};${STB_INCLUDE_PATH}")
 
 # glslang
@@ -92,13 +112,9 @@ target_link_libraries(GltfIblSampler PRIVATE glslang SPIRV)
 # Vulkan
 target_link_libraries(GltfIblSampler PRIVATE Vulkan::Vulkan)
 
-# SLIMKTX2
-if(NOT TARGET slimktx2) 
-    # we need to guard these for the case that a higher level project already created these
-    add_subdirectory("thirdparty/slimktx2")
-endif()
-
-target_link_libraries(GltfIblSampler PRIVATE slimktx2)
+# libktx
+include(thirdparty/KTX-Software.cmake)
+target_link_libraries(GltfIblSampler PRIVATE Ktx::ktx)
 
 #cli project
 add_sources("cli/source/*.cpp" "cli_sources")
@@ -107,3 +123,12 @@ target_link_libraries(cli PUBLIC GltfIblSampler)
 
 message(STATUS "")
 install(TARGETS cli GltfIblSampler)
+
+#copy ktx.dll to right folder in multi-build configs
+add_custom_command(TARGET GltfIblSampler
+  COMMAND ${CMAKE_COMMAND}
+        -DMSVC_BUILD_CONFIG_DIR=${CMAKE_CFG_INTDIR}
+        -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=${CMAKE_BINARY_DIR}
+        -P "${PROJECT_SOURCE_DIR}/cmake/copy_dlls.cmake"
+  VERBATIM
+) 
