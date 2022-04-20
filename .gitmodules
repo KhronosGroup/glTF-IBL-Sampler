@@ -3,9 +3,9 @@
 	url = https://github.com/nothings/stb.git
 [submodule "thirdparty/glslang"]
 	path = thirdparty/glslang
-	url = https://github.com/KhronosGroup/glslang
+	url = https://github.com/KhronosGroup/glslang.git
 [submodule "thirdparty/KTX-Software"]
     path = thirdparty/KTX-Software
-    url = git@github.com:ux3d/KTX-Software.git
+    url = https://github.com/KhronosGroup/KTX-Software.git
     branch = master
 	fetchrecursesubmodules = true
