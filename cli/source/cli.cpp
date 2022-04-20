@@ -11,10 +11,10 @@ int main(int argc, char* argv[])
 	const char* pathOutCubeMap = nullptr;
 	const char* pathOutLUT = nullptr;
 	unsigned int sampleCount = 1024u;
-	unsigned int mipLevelCount = 10u;
-	unsigned int cubeMapResolution = 1024u;
-	OutputFormat targetFormat = R16G16B16A16_SFLOAT;
-	Distribution distribution = GGX;
+	unsigned int mipLevelCount = 0u;
+	unsigned int cubeMapResolution = 0u;
+	OutputFormat targetFormat = OutputFormat::R16G16B16A16_SFLOAT;
+	Distribution distribution = Distribution::GGX;
 	float lodBias = 0.0f;
 	bool enableDebugOutput = false;
 
@@ -32,8 +32,8 @@ int main(int argc, char* argv[])
 		printf("-outLUT output path for BRDF LUT\n");
 		printf("-distribution NDF to sample (Lambertian, GGX, Charlie)\n");
 		printf("-sampleCount: number of samples used for filtering (default = 1024)\n");
-		printf("-mipLevelCount: number of mip levels of specular cube map\n");
-		printf("-cubeMapResolution: resolution of output cube map (default = 1024)\n");
+		printf("-mipLevelCount: number of mip levels of specular cube map. If omitted, an optimal mipmap level is chosen, based on the input panorama's resolution.\n");
+		printf("-cubeMapResolution: resolution of output cube map.  If omitted, an optimal resolution is chosen, based on the input panorama's resolution.\n");
 		printf("-targetFormat: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT)  \n");
 		printf("-lodBias: level of detail bias applied to filtering (default = 0) \n");
 
@@ -74,15 +74,15 @@ int main(int argc, char* argv[])
 
 			if (strcmp(targetFormatString, "R8G8B8A8_UNORM") == 0)
 			{
-				targetFormat = R8G8B8A8_UNORM;
+				targetFormat = OutputFormat::R8G8B8A8_UNORM;
 			}
 			else if (strcmp(targetFormatString, "R16G16B16A16_SFLOAT") == 0)
 			{
-				targetFormat = R16G16B16A16_SFLOAT;
+				targetFormat = OutputFormat::R16G16B16A16_SFLOAT;
 			}
 			else if (strcmp(targetFormatString, "R32G32B32A32_SFLOAT") == 0)
 			{
-				targetFormat = R32G32B32A32_SFLOAT;
+				targetFormat = OutputFormat::R32G32B32A32_SFLOAT;
 			}
 		}
 		else if (strcmp(argv[i], "-distribution") == 0)
@@ -91,15 +91,15 @@ int main(int argc, char* argv[])
 
 			if (strcmp(distributionString, "Lambertian") == 0)
 			{
-				distribution = Lambertian;
+				distribution = Distribution::Lambertian;
 			}
 			else if (strcmp(distributionString, "GGX") == 0)
 			{
-				distribution = GGX;
+				distribution = Distribution::GGX;
 			}
 			else if (strcmp(distributionString, "Charlie") == 0)
 			{
-				distribution = Charlie;
+				distribution = Distribution::Charlie;
 			}
 		}
 		else if (strcmp(argv[i], "-lodBias") == 0)
