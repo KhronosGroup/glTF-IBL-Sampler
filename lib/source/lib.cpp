@@ -6,6 +6,7 @@
 #include "ktxImage.h"
 #include <algorithm>
 #include <stdio.h>
+#include <math.h>
 //#include <string>
 
 #include "format.h"
