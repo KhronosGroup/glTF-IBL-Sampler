@@ -714,7 +714,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 	VkExtent3D panoramaExtent = vulkan.getCreateInfo(panoramaImage)->extent;
 	// it is best to sample an nxn cube map from a 4nx2n equirectangular image, e.g. a 1024x512 equirectangular images becomes a 256x256 cube map.
 	_cubemapResolution = _cubemapResolution != 0 ? _cubemapResolution : panoramaExtent.height / 2;
-	_mipmapCount = _mipmapCount != 0 ? _mipmapCount : static_cast<uint32_t>(floor(log2(_cubemapResolution)));
+	_mipmapCount = _mipmapCount != 0 ? _mipmapCount : static_cast<uint32_t>(floor(log2(_cubemapResolution))) + 1;
 
 	const uint32_t cubeMapSideLength = _cubemapResolution;
 	const uint32_t outputMipLevels = _distribution == Distribution::Lambertian ? 1u : _mipmapCount;
