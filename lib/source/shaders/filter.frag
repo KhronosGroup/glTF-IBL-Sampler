@@ -295,8 +295,9 @@ float computeLod(float pdf)
     // We achieved good results by using the original formulation from Krivanek & Colbert adapted to cubemaps
 
     // https://cgg.mff.cuni.cz/~jaroslav/papers/2007-sketch-fis/Final_sap_0073.pdf
-    float lod = 0.5 * log2( 6.0 * float(pFilterParameters.width) * float(pFilterParameters.width) / (float(pFilterParameters.sampleCount) * pdf));
-
+    float omegaP = 4.0 * UX3D_MATH_PI / (6.0 * float(pFilterParameters.width) * float(pFilterParameters.width));
+    float omegaS = 1.0 / (float(FilterParameters.sampleCoun) * pdf);
+    float lod = 0.5 * log2(omegaS / omegaP);
 
     return lod;
 }
